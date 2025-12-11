@@ -1,0 +1,20 @@
+﻿# PowerShell
+*.ps1xml
+*.backup
+*.backup_*
+
+# User-specific files
+config.json
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+test/
+temp/
