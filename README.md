@@ -2,18 +2,18 @@
 
 A smart, portable PowerShell profile installer designed for enterprise environments, air-gapped servers, and OneDrive-aware deployments.
 
-## âœ¨ Features
+## ✨ Features
 
-- ðŸš€ **Air-gap friendly** - No internet required, just copy two files
-- â˜ï¸ **OneDrive-aware** - Smart detection and handling of OneDrive-redirected Documents
-- ðŸŽ¯ **Portable** - Works on any Windows server with PowerShell 5.1+
-- ðŸ”„ **Easy updates** - Simple `.\install.ps1 -Update` command
-- ðŸ“ **Smart repo detection** - Auto-finds your dev folder or configure manually
-- ðŸŽ¨ **Rich profile** - Custom prompt, Git shortcuts, network tools, and more
-- ðŸ’¾ **Safe** - Automatically backs up existing profiles
-- ðŸ”§ **Configurable** - Per-machine settings via config file or environment variables
+- 🚀 **Air-gap friendly** - No internet required, just copy two files
+- ☁️ **OneDrive-aware** - Smart detection and handling of OneDrive-redirected Documents
+- 🎯 **Portable** - Works on any Windows server with PowerShell 5.1+
+- 🔄 **Easy updates** - Simple `.\install.ps1 -Update` command
+- 📍 **Smart repo detection** - Auto-finds your dev folder or configure manually
+- 🎨 **Rich profile** - Custom prompt, Git shortcuts, network tools, and more
+- 💾 **Safe** - Automatically backs up existing profiles
+- 🔧 **Configurable** - Per-machine settings via config file or environment variables
 
-## ðŸš€ Quick Start
+## 🚀 Quick Start
 
 ### Installation
 
@@ -37,7 +37,7 @@ To update your profile on a server where it's already installed:
 .\install.ps1 -Update
 ```
 
-## ðŸ“– How It Works
+## 📖 How It Works
 
 ### Architecture
 
@@ -63,7 +63,7 @@ Master profile is always stored in `%LOCALAPPDATA%`, ensuring:
 - Fast loading (local disk access)
 - Machine-specific configurations possible
 
-## ðŸ› ï¸ Usage
+## 🛠️ Usage
 
 ### Basic Commands
 ```powershell
@@ -97,7 +97,7 @@ The profile can automatically navigate to your development folder. Three methods
 Set-RepoFolder "C:\your\path"
 ```
 
-## ðŸ“¦ What's Included
+## 📦 What's Included
 
 ### Custom Prompt
 - Shows elevated status, PowerShell version, username, current folder
@@ -153,7 +153,7 @@ Set-RepoFolder "C:\your\path"
 - `profile` - Reload profile (verbose by default)
 - `helper` - Display command reference
 
-## ðŸ”§ Customization
+## 🔧 Customization
 
 ### Modify the Profile
 
@@ -174,7 +174,7 @@ if (Test-Path $configPath) {
 }
 ```
 
-## ðŸ¢ Enterprise Deployment
+## 🏢 Enterprise Deployment
 
 ### Deploy to Multiple Servers
 
@@ -202,7 +202,7 @@ foreach ($server in $servers) {
 
 Same script, but use `.\install.ps1 -Update`
 
-## ðŸ¤ Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -214,23 +214,23 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## ðŸ“ License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## ðŸ™ Acknowledgments
+## 🙏 Acknowledgments
 
 - Inspired by Unix dotfiles management
 - Built for sysadmins managing multiple Windows servers
 - Designed to work in restricted enterprise environments
 
-## ðŸ“ž Support
+## 📞 Support
 
-- ðŸ“– [Installation Guide](docs/INSTALLATION.md)
-- ðŸ”§ [Configuration Guide](docs/CONFIGURATION.md)
-- ðŸ› [Report Issues](../../issues)
+- 📖 [Installation Guide](docs/INSTALLATION.md)
+- 🔧 [Configuration Guide](docs/CONFIGURATION.md)
+- 🐛 [Report Issues](../../issues)
 
-## ðŸ—ºï¸ Roadmap
+## 🗺️ Roadmap
 
 - [ ] PowerShell Gallery module
 - [ ] Automated testing
@@ -240,4 +240,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with â¤ï¸ for the PowerShell community**
+**Made with ❤️ for the PowerShell community**
