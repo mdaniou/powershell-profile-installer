@@ -252,7 +252,9 @@ function gclean {
 
 # Quick git add, commit, push
 function gacp {
-    param([Parameter(Mandatory=$true)]$Message)
+    param(
+        [string]$Message = "[$(Get-Date -Format 'MMM dd')] $(((git status --porcelain) -replace '^.{3}' | Split-Path -Leaf | Select-Object -First 2) -join ', ') $(if((git status --porcelain).Count -gt 2){'+more'})"
+    )
     git add .
     git commit -m $Message
     git push
