@@ -252,9 +252,7 @@ function gclean {
 
 # Quick git add, commit, push
 function gacp {
-    param(
-        [string]$Message = "[$(Get-Date -Format 'MMM dd')] $(((git status --porcelain) -replace '^.{3}' | Split-Path -Leaf | Select-Object -First 2) -join ', ') $(if((git status --porcelain).Count -gt 2){'+more'})"
-    )
+    param($Message = "$(Get-Date -Format 'yyyy-MM-dd HH:mm') | $((git status --porcelain | Measure-Object).Count) file(s) changed")
     git add .
     git commit -m $Message
     git push
@@ -276,7 +274,134 @@ function gsl {
     git stash list
 }
 
-Write-Host "      [OK] Git: g, gs, gcm, gcam, gcad, glg, gb, gg, gundo, gclean, gacp, gfiles, gss, gsl" -ForegroundColor DarkGray
+# Create a new worktree and branch from within current git directory.
+function gwa {
+    param([string]$Branch)
+
+    if (-not $Branch) {
+        Write-Host "Usage: ga [branch name]"
+        return
+    }
+
+    git rev-parse --is-inside-work-tree 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Not inside a git repository"
+        return
+    }
+
+    $base = git rev-parse --show-toplevel
+    $path = "$base--$Branch"
+
+    Write-Host "Creating worktree " -NoNewline
+    Write-Host $path -ForegroundColor Cyan
+
+    git worktree add -b $Branch $path 2>$null
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to create worktree" -ForegroundColor Red
+        return
+    }
+
+    Write-Host "Done" -ForegroundColor Green
+    Set-Location $path
+}
+
+# Remove worktree and branch from within active worktree directory.
+function gwd {
+    $cwd = (Get-Location).Path
+    $worktree = Split-Path -Leaf $cwd
+    $parts = $worktree -split '--', 2
+    if ($parts.Count -lt 2) {
+        Write-Host "Not inside a worktree directory (expected name like 'repo--branch')"
+        return
+    }
+    $root = $parts[0]
+    $branch = $parts[1]
+    $confirm = Read-Host "Remove worktree and branch '$branch'? (y/N)"
+    if ($confirm -eq 'y') {
+        Set-Location "..\$root"
+        git worktree remove $cwd --force
+        if ($LASTEXITCODE -eq 0) {
+            git branch -D $branch
+        }
+    }
+}
+
+# move to the other worktrees
+function gwl {
+    param([string]$Path)
+
+    if (-not $Path) {
+        $worktrees = git worktree list --porcelain |
+            Select-String "^worktree" |
+            ForEach-Object { $_.Line -replace "^worktree ", "" }
+
+        $current = (Get-Location).Path.TrimEnd('\').Replace('\', '/')
+        $idx = 0
+        for ($i = 0; $i -lt $worktrees.Count; $i++) {
+            if ($worktrees[$i].TrimEnd('/') -ieq $current) {
+                $idx = $i
+                break
+            }
+        }
+
+        $next = $worktrees[($idx + 1) % $worktrees.Count]
+        Set-Location $next
+        Write-Host $next -ForegroundColor Cyan
+        return
+    }
+
+    Set-Location $Path
+}
+
+# delete all worktress
+function gwclean {
+    $worktrees = git worktree list --porcelain |
+        Select-String "^worktree" |
+        ForEach-Object { $_.Line -replace "^worktree ", "" }
+
+    $main = $worktrees[0]
+    $others = $worktrees | Select-Object -Skip 1
+
+    if ($others.Count -eq 0) {
+        Write-Host "No worktrees to clean up" -ForegroundColor Cyan
+        return
+    }
+
+    Write-Host "About to remove $($others.Count) worktree(s):" -ForegroundColor Yellow
+    $others | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    $confirm = Read-Host "Confirm? (y/N)"
+
+    if ($confirm -ne 'y') { return }
+
+    Set-Location $main
+
+    foreach ($wt in $others) {
+        $branch = (git worktree list --porcelain |
+            Select-String -Pattern "worktree $($wt -replace '/','\/')" -Context 0,2).Context.PostContext |
+            Select-String "^branch" |
+            ForEach-Object { $_.Line -replace "^branch refs/heads/", "" }
+
+        Write-Host "Removing $wt " -NoNewline
+        git worktree remove $wt --force 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            git branch -D $branch 2>$null
+            Write-Host "done" -ForegroundColor Green
+        } else {
+            Write-Host "failed" -ForegroundColor Red
+        }
+    }
+}
+
+# add worktree tab
+Register-ArgumentCompleter -CommandName gs -ParameterName Path -ScriptBlock {
+    git worktree list --porcelain |
+        Select-String "^worktree" |
+        ForEach-Object { $_.Line -replace "^worktree ", "" } |
+        ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+}
+
+Write-Host "      [OK] Git: g, gs, gcm, gcam, gcad, glg, gb, gg, gundo, gclean, gacp, gfiles, gss, gsl, gwa, gwd, gwl, gwclean" -ForegroundColor DarkGray
 
 
 # ============================================================================
@@ -446,6 +571,10 @@ function helper {
     Write-Host "  gfiles" -ForegroundColor Yellow -NoNewline; Write-Host "      Show changed files"
     Write-Host "  gss" -ForegroundColor Yellow -NoNewline; Write-Host "         Git stash with message: gss [message]"
     Write-Host "  gsl" -ForegroundColor Yellow -NoNewline; Write-Host "         List git stashes"
+    Write-Host "  gwa" -ForegroundColor Yellow -NoNewline; Write-Host "         Create a new worktree and branch from within current git directory."
+    Write-Host "  gwd" -ForegroundColor Yellow -NoNewline; Write-Host "         Remove worktree and branch from within active worktree directory"
+    Write-Host "  gwl" -ForegroundColor Yellow -NoNewline; Write-Host "         Move to the other worktrees."
+    Write-Host "  gwclean" -ForegroundColor Yellow -NoNewline; Write-Host "     Delete all worktress."
     Write-Host ""
     
     Write-Host "  NETWORK" -ForegroundColor Magenta
