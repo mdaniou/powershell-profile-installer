@@ -348,7 +348,8 @@ function gclean {
     }
 
     function _gclean-get-local {
-        git branch --merged |
+        param([string]$Base)
+        git branch --merged $Base 2>$null |
             Where-Object { $_ -notmatch 'main|master|\*' } |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -ne '' } |
@@ -356,12 +357,19 @@ function gclean {
     }
 
     function _gclean-get-remote {
-        git branch -r --merged |
+        param([string]$Base)
+        git branch -r --merged $Base 2>$null |
             Where-Object { $_ -notmatch 'main|master|\*|HEAD' } |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -ne '' } |
             ForEach-Object { [PSCustomObject]@{ Name = $_; Type = 'R' } }
     }
+
+    # Detect default branch (main/master) for consistent --merged comparison
+    $defaultBranch = git symbolic-ref refs/remotes/origin/HEAD 2>$null |
+        ForEach-Object { $_ -replace 'refs/remotes/origin/', '' }
+    if (-not $defaultBranch) { $defaultBranch = 'main' }
+    $remoteBase = "origin/$defaultBranch"
 
     # Determine initial mode from params, or prompt
     $mode = if ($Local) { 'l' } elseif ($Remote) { 'r' } else { $null }
@@ -384,9 +392,9 @@ function gclean {
 
     while ($true) {
         $candidates = switch ($mode) {
-            'l' { _gclean-get-local }
-            'r' { _gclean-get-remote }
-            'b' { @(_gclean-get-local) + @(_gclean-get-remote) }
+            'l' { _gclean-get-local $defaultBranch }
+            'r' { _gclean-get-remote $remoteBase }
+            'b' { @(_gclean-get-local $defaultBranch) + @(_gclean-get-remote $remoteBase) }
         }
 
         if (-not $candidates) {
