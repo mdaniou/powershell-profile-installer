@@ -396,8 +396,10 @@ function gclean {
         Write-Host "  [1-N] Delete by number" -ForegroundColor Cyan
         Write-Host "  [a]  Delete all" -ForegroundColor Red
         if ($mode -eq 'b') {
-            Write-Host "  [al] Delete all local" -ForegroundColor Red
-            Write-Host "  [ar] Delete all remote" -ForegroundColor Red
+            $hasLocal  = $candidates | Where-Object { $_.Type -eq 'L' }
+            $hasRemote = $candidates | Where-Object { $_.Type -eq 'R' }
+            if ($hasLocal)  { Write-Host "  [al] Delete all local"  -ForegroundColor Red }
+            if ($hasRemote) { Write-Host "  [ar] Delete all remote" -ForegroundColor Red }
         }
         Write-Host "  [q]  Quit" -ForegroundColor DarkGray
         Write-Host ""
