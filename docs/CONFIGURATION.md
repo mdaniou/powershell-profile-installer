@@ -1,6 +1,65 @@
 ﻿# Configuration Guide
 
-## Repository Auto-Navigation
+## Auto-Execute Scripts
+
+### Overview
+
+The profile can automatically dot-source scripts (or all `.ps1` files in a folder) on every terminal start. This is useful for importing modules or running machine-specific setup that can't live in the repository.
+
+Paths are stored in `%LOCALAPPDATA%\PSProfile\config.json` under the `ScriptPaths` key — they are machine-local and never synced or committed.
+
+### Configure During Installation
+
+When running `.\install.ps1`, you are prompted to enter paths interactively:
+
+```
+Path 1: C:\Users\me\scripts\modules
+Path 2: C:\Users\me\scripts\extra-setup.ps1
+Path 3: <Enter to finish>
+```
+
+- Enter a **folder** to dot-source all `.ps1` files in it (sorted by name, non-recursive)
+- Enter a **`.ps1` file** to dot-source it directly
+- Press **Enter** with no input to skip (you can add paths later)
+
+### Manage Paths After Installation
+
+Use the `profile` CLI (available after loading your profile):
+
+```powershell
+profile script list            # show all configured paths (with existence indicator)
+profile script add C:\path     # add a folder or .ps1 file
+profile script remove 1        # remove path number 1 (from list output)
+```
+
+Run `profile` with no arguments to see all available subcommands.
+
+### Manual Config Editing
+
+The config file is at `%LOCALAPPDATA%\PSProfile\config.json`:
+
+```json
+{
+  "ScriptPaths": [
+    "C:\\Users\\me\\scripts\\modules",
+    "C:\\Users\\me\\scripts\\extra-setup.ps1"
+  ]
+}
+```
+
+### Behavior Details
+
+- **Folder paths**: all `.ps1` files directly in the folder are dot-sourced, sorted alphabetically. Subdirectories are not recursed.
+- **File paths**: the file is dot-sourced directly.
+- **Missing path**: a yellow warning is printed; other paths continue loading.
+- **Script error**: a yellow warning is printed with the error; other scripts continue loading.
+- **Load summary**: the profile prints `Loaded N script(s) from M path(s)` on startup.
+
+### Update Behavior
+
+When running `.\install.ps1 -Update`, existing `ScriptPaths` are shown for information and preserved unchanged. Use `Set-ScriptPaths` to modify them.
+
+
 
 The profile can automatically navigate to your development folder on startup.
 
