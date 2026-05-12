@@ -23,6 +23,46 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 Write-Host "[1/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring custom prompt..." -ForegroundColor Green
 
+function Get-GitStatus {
+    $raw = git status --porcelain=v1 -b 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $raw) { return $null }
+
+    $lines = $raw -split "`n"
+    $header = $lines[0]
+
+    $branch = if ($header -match '^## No commits yet on (.+)') { $Matches[1] }
+              elseif ($header -match '^## HEAD \(no branch\)')  { 'HEAD' }
+              elseif ($header -match '^## ([^.]+)')             { $Matches[1] }
+              else { '?' }
+
+    $ahead  = if ($header -match 'ahead (\d+)')  { [int]$Matches[1] } else { 0 }
+    $behind = if ($header -match 'behind (\d+)') { [int]$Matches[1] } else { 0 }
+
+    $staged = 0; $modified = 0; $deleted = 0; $untracked = 0
+    foreach ($line in $lines[1..($lines.Count - 1)]) {
+        if ($line.Length -lt 2) { continue }
+        $x = $line[0]; $y = $line[1]
+        if ($x -eq '?' -and $y -eq '?') { $untracked++; continue }
+        if ($x -in @('A', 'M', 'R', 'C')) { $staged++ }
+        if ($y -eq 'M') { $modified++ }
+        if ($x -eq 'D' -or $y -eq 'D') { $deleted++ }
+    }
+
+    $parts = @()
+    if ($staged    -gt 0) { $parts += "+$staged" }
+    if ($modified  -gt 0) { $parts += "~$modified" }
+    if ($deleted   -gt 0) { $parts += "-$deleted" }
+    if ($untracked -gt 0) { $parts += "?$untracked" }
+    if ($ahead     -gt 0) { $parts += ([char]0x21E1).ToString() + $ahead }
+    if ($behind    -gt 0) { $parts += ([char]0x21E3).ToString() + $behind }
+
+    return [PSCustomObject]@{
+        Branch  = $branch.Trim()
+        Status  = ($parts -join ' ')
+        IsClean = ($parts.Count -eq 0)
+    }
+}
+
 function prompt {
   
     # Assign Windows Title Text
@@ -75,6 +115,14 @@ function prompt {
     }
     else {
         Write-Host " .\$CmdPromptCurrentFolder\ " -ForegroundColor White -BackgroundColor DarkGray -NoNewline
+    }
+
+    $git = Get-GitStatus
+    if ($git) {
+        Write-Host " $($git.Branch) " -BackgroundColor DarkCyan -ForegroundColor White -NoNewline
+        if (-not $git.IsClean) {
+            Write-Host " $($git.Status) " -BackgroundColor Black -ForegroundColor Yellow -NoNewline
+        }
     }
 
     Write-Host " $date " -ForegroundColor White
