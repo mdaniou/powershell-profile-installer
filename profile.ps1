@@ -20,7 +20,7 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # ============================================================================
 # PROMPT CUSTOMIZATION
 # ============================================================================
-Write-Host "[1/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[1/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring custom prompt..." -ForegroundColor Green
 
 function prompt {
@@ -88,7 +88,7 @@ Write-Host "      [OK] Custom prompt configured" -ForegroundColor DarkGray
 # ============================================================================
 # NAVIGATION SHORTCUTS
 # ============================================================================
-Write-Host "[2/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[2/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up navigation shortcuts..." -ForegroundColor Green
 
 function .. { Set-Location .. }
@@ -101,7 +101,7 @@ Write-Host "      [OK] Navigation shortcuts: .. ... ...." -ForegroundColor DarkG
 # ============================================================================
 # FILE OPERATIONS
 # ============================================================================
-Write-Host "[3/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[3/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring file operations..." -ForegroundColor Green
 
 # Create new file (Unix-style touch command)
@@ -178,7 +178,7 @@ Write-Host "      [OK] File operations: touch, grep, ff, fif, dsize, big, mkcd, 
 # ============================================================================
 # GIT CONFIGURATION
 # ============================================================================
-Write-Host "[4/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[4/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up Git aliases and functions..." -ForegroundColor Green
 
 # Git alias
@@ -407,7 +407,7 @@ Write-Host "      [OK] Git: g, gs, gcm, gcam, gcad, glg, gb, gg, gundo, gclean, 
 # ============================================================================
 # NETWORK UTILITIES
 # ============================================================================
-Write-Host "[5/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[5/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading network utilities..." -ForegroundColor Green
 
 # List all local IP addresses
@@ -449,7 +449,7 @@ Write-Host "      [OK] Network: inet, ports, myip, nsl" -ForegroundColor DarkGra
 # ============================================================================
 # SYSTEM INFORMATION
 # ============================================================================
-Write-Host "[6/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[6/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading system information utilities..." -ForegroundColor Green
 
 # System resource usage
@@ -487,46 +487,13 @@ Write-Host "      [OK] System info: sysinfo, apps, uptime" -ForegroundColor Dark
 # ============================================================================
 # POWERSHELL UTILITIES
 # ============================================================================
-Write-Host "[7/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[7/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring PowerShell utilities..." -ForegroundColor Green
 
 # View function source code quickly
 function fn {
     param([Parameter(Mandatory=$true)]$Name)
     (Get-Command $Name).ScriptBlock
-}
-
-# Reload profile without restarting PowerShell (verbose by default)
-function profile { 
-    param([switch]$Silent)
-    
-    if (-not $Silent) {
-        Write-Host "`n========================================" -ForegroundColor Cyan
-        Write-Host "  Reloading PowerShell Profile..." -ForegroundColor Cyan
-        Write-Host "========================================`n" -ForegroundColor Cyan
-    }
-    
-    $reloadStart = Get-Date
-    
-    try {
-        # Clear any previous errors
-        $Error.Clear()
-        
-        # Force reload the profile
-        & $PROFILE
-        
-        if (-not $Silent) {
-            $reloadTime = ((Get-Date) - $reloadStart).TotalMilliseconds
-            Write-Host "`n========================================" -ForegroundColor Cyan
-            Write-Host "  Profile reloaded successfully!" -ForegroundColor Green
-            Write-Host "  Reload time: " -NoNewline -ForegroundColor White
-            Write-Host "$([math]::Round($reloadTime, 2)) ms" -ForegroundColor Yellow
-            Write-Host "========================================`n" -ForegroundColor Cyan
-        }
-    }
-    catch {
-        Write-Host "`nError reloading profile: $_" -ForegroundColor Red
-    }
 }
 
 # Display helper summary of all custom commands
@@ -591,9 +558,14 @@ function helper {
     Write-Host ""
     
     Write-Host "  POWERSHELL" -ForegroundColor Magenta
-    Write-Host "  fn" -ForegroundColor Yellow -NoNewline; Write-Host "          View function source: fn FUNCTION-NAME"
-    Write-Host "  profile" -ForegroundColor Yellow -NoNewline; Write-Host "     Reload PowerShell profile (verbose by default)"
-    Write-Host "               Use " -NoNewline; Write-Host "profile -Silent" -ForegroundColor Yellow -NoNewline; Write-Host " for quiet reload"
+    Write-Host "  fn" -ForegroundColor Yellow -NoNewline; Write-Host "                    View function source: fn FUNCTION-NAME"
+    Write-Host "  helper" -ForegroundColor Yellow -NoNewline; Write-Host "                Display this command reference"
+    Write-Host "  profile" -ForegroundColor Yellow -NoNewline; Write-Host "               Show profile CLI help"
+    Write-Host "  profile reload" -ForegroundColor Yellow -NoNewline; Write-Host "        Reload the profile"
+    Write-Host "  profile reload -Silent" -ForegroundColor Yellow -NoNewline; Write-Host " Reload without output"
+    Write-Host "  profile script list" -ForegroundColor Yellow -NoNewline; Write-Host "   List auto-execute script paths"
+    Write-Host "  profile script add" -ForegroundColor Yellow -NoNewline; Write-Host "    Add a folder or .ps1 file: profile script add <path>"
+    Write-Host "  profile script remove" -ForegroundColor Yellow -NoNewline; Write-Host " Remove a path by number:    profile script remove <n>"
     Write-Host ""
     
     Write-Host "  TIP: " -ForegroundColor Cyan -NoNewline
@@ -603,13 +575,76 @@ function helper {
     Write-Host ""
 }
 
-Write-Host "      [OK] PowerShell utilities: fn, profile, helper" -ForegroundColor DarkGray
+# Load the profile CLI (profile reload, profile script add/list/remove)
+$_cliScript = Join-Path $env:LOCALAPPDATA "PSProfile\profile-cli.ps1"
+if (Test-Path $_cliScript) {
+    . $_cliScript
+} else {
+    Write-Host "      [WARNING] profile-cli.ps1 not found - run install.ps1 to fix" -ForegroundColor Yellow
+}
+Remove-Variable _cliScript
+
+Write-Host "      [OK] PowerShell utilities: fn, helper, profile" -ForegroundColor DarkGray
+
+
+# ============================================================================
+# AUTO-EXECUTE SCRIPTS
+# ============================================================================
+Write-Host "[8/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "Loading auto-execute scripts..." -ForegroundColor Green
+
+$psConfigPath = Join-Path $env:LOCALAPPDATA "PSProfile\config.json"
+$autoExecPaths = @()
+
+if (Test-Path $psConfigPath) {
+    try {
+        $psProfileConfig = Get-Content $psConfigPath -Raw | ConvertFrom-Json
+        if (Get-Member -InputObject $psProfileConfig -Name 'ScriptPaths' -MemberType NoteProperty) {
+            $autoExecPaths = @($psProfileConfig.ScriptPaths) | Where-Object { $_ }
+        }
+    } catch {
+        Write-Host "      [WARNING] Could not read config: $_" -ForegroundColor Yellow
+    }
+}
+
+if ($autoExecPaths.Count -eq 0) {
+    Write-Host "      [OK] No scripts configured" -ForegroundColor DarkGray
+} else {
+    $autoLoadedCount = 0
+    foreach ($autoPath in $autoExecPaths) {
+        if (-not (Test-Path $autoPath)) {
+            Write-Host "      [WARNING] Path not found: $autoPath" -ForegroundColor Yellow
+            continue
+        }
+        $autoItem = Get-Item $autoPath -ErrorAction SilentlyContinue
+        if ($autoItem.PSIsContainer) {
+            $autoScripts = Get-ChildItem -Path $autoPath -Filter "*.ps1" -File -ErrorAction SilentlyContinue |
+                Sort-Object Name
+            foreach ($autoScript in $autoScripts) {
+                try {
+                    . $autoScript.FullName
+                    $autoLoadedCount++
+                } catch {
+                    Write-Host "      [WARNING] Error in $($autoScript.Name): $_" -ForegroundColor Yellow
+                }
+            }
+        } else {
+            try {
+                . $autoPath
+                $autoLoadedCount++
+            } catch {
+                Write-Host "      [WARNING] Error in $(Split-Path $autoPath -Leaf): $_" -ForegroundColor Yellow
+            }
+        }
+    }
+    Write-Host "      [OK] Loaded $autoLoadedCount script(s) from $($autoExecPaths.Count) path(s)" -ForegroundColor DarkGray
+}
 
 
 # ============================================================================
 # STARTUP
 # ============================================================================
-Write-Host "[8/8] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[9/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting default location..." -ForegroundColor Green
 
 # Detect if we're in a "user-selected" directory

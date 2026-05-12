@@ -20,7 +20,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$SourceProfile = Join-Path $PSScriptRoot "profile.ps1"
+$SourceProfile   = Join-Path $PSScriptRoot "profile.ps1"
+$SourceCliScript = Join-Path $PSScriptRoot "profile-cli.ps1"
 
 # ==============================================================================
 # SMART PATH DETECTION
@@ -182,8 +183,8 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # Show configuration
 Show-Configuration
 
-# [1] Validate source profile exists
-Write-Step "[1/4] Validating source profile..."
+# [1] Validate source files exist
+Write-Step "[1/5] Validating source profile..."
 
 if (!(Test-Path $SourceProfile)) {
     Write-Host "      [ERROR] profile.ps1 not found in current directory!" -ForegroundColor Red
@@ -192,11 +193,20 @@ if (!(Test-Path $SourceProfile)) {
     exit 1
 }
 
+if (!(Test-Path $SourceCliScript)) {
+    Write-Host "      [ERROR] profile-cli.ps1 not found in current directory!" -ForegroundColor Red
+    Write-Path "$SourceCliScript"
+    Write-Host "`n      Make sure profile-cli.ps1 is in the same folder as install.ps1" -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Success "Source profile found"
 Write-Path "$SourceProfile"
+Write-Success "Profile CLI found"
+Write-Path "$SourceCliScript"
 
 # [2] Copy master profile to %LOCALAPPDATA%
-Write-Step "[2/4] Installing master profile..."
+Write-Step "[2/5] Installing master profile..."
 
 if (!(Test-Path $MasterProfileDir)) {
     New-Item -ItemType Directory -Path $MasterProfileDir -Force | Out-Null
@@ -204,13 +214,16 @@ if (!(Test-Path $MasterProfileDir)) {
     Write-Path "$MasterProfileDir"
 }
 
-Copy-Item $SourceProfile $MasterProfile -Force
+Copy-Item $SourceProfile    $MasterProfile -Force
+Copy-Item $SourceCliScript (Join-Path $MasterProfileDir "profile-cli.ps1") -Force
 Write-Success "Master profile installed"
 Write-Path "$MasterProfile"
+Write-Success "Profile CLI installed"
+Write-Path "$(Join-Path $MasterProfileDir 'profile-cli.ps1')"
 Write-Info "Stored in LOCALAPPDATA (local to this machine, never synced)"
 
 # [3] Create loader scripts
-Write-Step "[3/4] Configuring profile loaders..."
+Write-Step "[3/5] Configuring profile loaders..."
 
 $LoaderScript = @"
 # Auto-generated profile loader
@@ -281,8 +294,79 @@ if ($skippedCount -gt 0) {
     Write-Host "      [WARNING] Skipped $skippedCount locations (see errors above)" -ForegroundColor Yellow
 }
 
-# [4] Test profile load
-Write-Step "[4/4] Testing profile..."
+# [4/5] Configure auto-execute scripts
+Write-Step "[4/5] Configuring auto-execute scripts..."
+
+$configPath = Join-Path $MasterProfileDir "config.json"
+
+# Load existing config or initialize a fresh one
+$psConfig = [PSCustomObject]@{ ScriptPaths = @() }
+if (Test-Path $configPath) {
+    try {
+        $psConfig = Get-Content $configPath -Raw | ConvertFrom-Json
+        if (-not (Get-Member -InputObject $psConfig -Name 'ScriptPaths' -MemberType NoteProperty)) {
+            $psConfig | Add-Member -NotePropertyName 'ScriptPaths' -NotePropertyValue @()
+        }
+    } catch {
+        Write-Info "Could not read existing config, starting fresh"
+    }
+}
+
+$existingPaths = @($psConfig.ScriptPaths) | Where-Object { $_ }
+
+if ($Update) {
+    # On update: show existing paths for info, skip re-prompt
+    if ($existingPaths.Count -gt 0) {
+        Write-Info "Configured auto-execute paths (unchanged):"
+        foreach ($p in $existingPaths) {
+            Write-Path $p
+        }
+        Write-Success "Script paths preserved (use 'profile script add/remove' to modify)"
+    } else {
+        Write-Info "No auto-execute paths configured"
+        Write-Info "(Use 'profile script add <path>' to add paths)"
+    }
+} else {
+    # Fresh install: prompt interactively
+    Write-Host ""
+    Write-Host "      Auto-Execute Scripts (optional)" -ForegroundColor Cyan
+    Write-Info "Enter folders or .ps1 files to dot-source on every terminal start."
+    Write-Info "Paths are machine-local and will not be committed to the repository."
+    Write-Host "      Press " -NoNewline -ForegroundColor DarkGray
+    Write-Host "Enter" -NoNewline -ForegroundColor Yellow
+    Write-Host " with no input to skip." -ForegroundColor DarkGray
+    Write-Host ""
+
+    $newPaths = [System.Collections.ArrayList]::new()
+    $promptNum = 1
+    while ($true) {
+        $pathEntry = Read-Host "      Path $promptNum"
+        if ([string]::IsNullOrWhiteSpace($pathEntry)) { break }
+
+        $pathEntry = $pathEntry.Trim()
+        if (-not (Test-Path $pathEntry)) {
+            Write-Host "      [WARNING] Path not found: $pathEntry" -ForegroundColor Yellow
+            Write-Host "               (saved anyway - path may be created later)" -ForegroundColor DarkGray
+        } else {
+            Write-Success "Found: $pathEntry"
+        }
+        [void]$newPaths.Add($pathEntry)
+        $promptNum++
+    }
+
+    if ($newPaths.Count -gt 0) {
+        $psConfig.ScriptPaths = @($newPaths)
+        $psConfig | ConvertTo-Json -Depth 5 | Out-File $configPath -Encoding UTF8 -Force
+        Write-Success "Saved $($newPaths.Count) path(s) to config"
+        Write-Path $configPath
+    } else {
+        Write-Info "No paths configured (skipped)"
+        Write-Info "Use 'profile script add <path>' after loading your profile to add paths later"
+    }
+}
+
+# [5/5] Test profile load
+Write-Step "[5/5] Testing profile..."
 
 try {
     $loadTime = Measure-Command { . $MasterProfile }
@@ -329,6 +413,18 @@ Write-Host ".\install.ps1 -Local" -ForegroundColor Cyan
 Write-Host "               (forces local Documents, skips OneDrive)" -ForegroundColor DarkGray
 Write-Host "    Uninstall: " -NoNewline -ForegroundColor DarkGray
 Write-Host ".\install.ps1 -Uninstall" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Profile CLI:" -ForegroundColor White
+Write-Host "    profile                  " -NoNewline -ForegroundColor DarkGray
+Write-Host "Show help" -ForegroundColor Cyan
+Write-Host "    profile reload           " -NoNewline -ForegroundColor DarkGray
+Write-Host "Reload the profile" -ForegroundColor Cyan
+Write-Host "    profile script list      " -NoNewline -ForegroundColor DarkGray
+Write-Host "List auto-execute script paths" -ForegroundColor Cyan
+Write-Host "    profile script add <path>" -NoNewline -ForegroundColor DarkGray
+Write-Host " Add a path" -ForegroundColor Cyan
+Write-Host "    profile script remove <n>" -NoNewline -ForegroundColor DarkGray
+Write-Host " Remove a path by number" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  To activate in current session:" -ForegroundColor White
 Write-Host "    " -NoNewline

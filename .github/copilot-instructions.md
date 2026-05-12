@@ -18,7 +18,7 @@ Loaders are identified by the string `"Auto-generated profile loader"` in their 
 ## Key Files
 
 - `install.ps1` — installer/updater/uninstaller; params: `-Update`, `-Uninstall`, `-Local`
-- `profile.ps1` — the actual profile loaded at shell startup (8 numbered sections)
+- `profile.ps1` — the actual profile loaded at shell startup (9 numbered sections)
 - `examples/profile-example.ps1` — stripped-down reference example
 - `docs/INSTALLATION.md` — deployment methods (USB, RDP, network share)
 - `docs/CONFIGURATION.md` — repo auto-navigation config, machine-specific settings, OneDrive handling
@@ -35,9 +35,13 @@ Use the four established helper functions for all console output — do not call
 ### `profile.ps1` structure
 The profile prints numbered loading progress `[1/8]` through `[8/8]` using `Write-Host` directly (the helper functions from `install.ps1` are not available at profile load time). Each section ends with a DarkGray `[OK]` confirmation line.
 
-Sections: `[1]` Prompt, `[2]` Navigation, `[3]` File ops, `[4]` Git, `[5]` Network, `[6]` System info, `[7]` PS utilities, `[8]` Startup (default location).
+Sections: `[1]` Prompt, `[2]` Navigation, `[3]` File ops, `[4]` Git, `[5]` Network, `[6]` System info, `[7]` PS utilities, `[8]` Auto-execute scripts, `[9]` Startup (default location).
 
-### Naming conventions
+### `profile` CLI (`profile-cli.ps1`)
+`profile-cli.ps1` is a separate file (deployed alongside `profile.ps1`, dot-sourced at end of section [7]) that defines the `profile` command. Bare `profile` shows help; subcommands:
+- `profile reload [-Silent]` — reload the profile
+- `profile script list/add/remove` — manage `ScriptPaths` config
+Internal helpers are prefixed `_profile-*` (private by convention, not by scope).
 - Git aliases follow the `g*` prefix: `gs`, `gcm`, `gcam`, `gb`, `gg`, `gacp`, etc.
 - Git worktree functions follow the `gw*` prefix: `gwa` (add), `gwd` (delete), `gwl` (list/jump), `gwclean`
 - Worktree directories are named `reponame--branchname` (double-dash separator)
@@ -50,6 +54,11 @@ Repo auto-navigation checks in priority order:
 1. `$env:DEV_REPO` environment variable
 2. `%LOCALAPPDATA%\PSProfile\config.json` → `RepoFolder` key
 3. Auto-detection of common paths (`C:\repo`, `C:\dev`, `D:\repos`, etc.)
+
+### `config.json` schema
+`%LOCALAPPDATA%\PSProfile\config.json` is the machine-local config. Current keys:
+- `ScriptPaths` — `string[]` — folders or `.ps1` files to dot-source on every terminal start (managed via `profile script add/remove`)
+- `RepoFolder` — `string` — dev folder for startup navigation (documented but not yet implemented in profile.ps1)
 
 ### Startup location logic
 On profile load, the startup section only changes to `C:\repo` if the current directory is one of the known system-default locations (USERPROFILE, Documents, System32, etc.). If the user opened PowerShell in a specific directory, it stays there.
