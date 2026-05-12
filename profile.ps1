@@ -309,6 +309,7 @@ function gp {
         git push
     }
 }
+Remove-Item Alias:gp -Force -ErrorAction SilentlyContinue
 
 function gacp {
     param($Message = "$(Get-Date -Format 'yyyy-MM-dd HH:mm') | $((git status --porcelain | Measure-Object).Count) file(s) changed")
