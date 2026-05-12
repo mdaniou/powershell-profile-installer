@@ -106,7 +106,7 @@ function _profile-script-help {
 }
 
 function _profile-script-list {
-    $paths = _profile-config-get-paths
+    $paths = @(_profile-config-get-paths)
     Write-Host ""
     if ($paths.Count -eq 0) {
         Write-Host "  No script paths configured." -ForegroundColor DarkGray
@@ -135,7 +135,7 @@ function _profile-script-add {
     }
 
     $Path = $Path.Trim()
-    $paths = _profile-config-get-paths
+    $paths = @(_profile-config-get-paths)
 
     if ($paths -contains $Path) {
         Write-Host "  Already configured: $Path" -ForegroundColor Yellow
@@ -165,7 +165,7 @@ function _profile-script-remove {
         return
     }
 
-    $paths = _profile-config-get-paths
+    $paths = @(_profile-config-get-paths)
 
     if ($paths.Count -eq 0) {
         Write-Host "  No paths configured." -ForegroundColor DarkGray
@@ -197,7 +197,7 @@ function _profile-config-get-paths {
     try {
         $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
         if (Get-Member -InputObject $cfg -Name 'ScriptPaths' -MemberType NoteProperty) {
-            return @($cfg.ScriptPaths) | Where-Object { $_ }
+            return @(@($cfg.ScriptPaths) | Where-Object { $_ })
         }
     } catch {}
     return @()
