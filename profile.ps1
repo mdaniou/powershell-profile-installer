@@ -371,26 +371,32 @@ function gclean {
     if (-not $defaultBranch) { $defaultBranch = 'main' }
     $remoteBase = "origin/$defaultBranch"
 
+    # Fetch latest remote state so no merged branches are missed
+    Write-Host "  Fetching..." -ForegroundColor DarkGray
+    git fetch --prune 2>&1 | Out-Null
+
     # Determine mode from params; default to both
     $mode = if ($Local) { 'l' } elseif ($Remote) { 'r' } else { 'b' }
 
     while ($true) {
-        $candidates = switch ($mode) {
+        $candidates = @(switch ($mode) {
             'l' { _gclean-get-local $defaultBranch }
             'r' { _gclean-get-remote $remoteBase }
             'b' { @(_gclean-get-local $defaultBranch) + @(_gclean-get-remote $remoteBase) }
-        }
+        })
 
-        if (-not $candidates) {
+        if ($candidates.Count -eq 0) {
             Write-Host "  No merged branches to clean." -ForegroundColor DarkGray
             return
         }
 
         Write-Host ""
         Write-Host "  Merged branches:" -ForegroundColor Yellow
-        for ($i = 0; $i -lt $candidates.Count; $i++) {
-            $tag = if ($mode -eq 'b') { "  [$($candidates[$i].Type)]" } else { '' }
-            Write-Host ("  [{0}] {1}{2}" -f ($i + 1), $candidates[$i].Name, $tag) -ForegroundColor Cyan
+        $idx = 1
+        foreach ($branch in $candidates) {
+            $tag = if ($mode -eq 'b') { "  [$($branch.Type)]" } else { '' }
+            Write-Host ("  [{0}] {1}{2}" -f $idx, $branch.Name, $tag) -ForegroundColor Cyan
+            $idx++
         }
         Write-Host ""
         Write-Host "  [1-N] Delete by number" -ForegroundColor Cyan
