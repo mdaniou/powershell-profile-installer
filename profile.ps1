@@ -371,24 +371,8 @@ function gclean {
     if (-not $defaultBranch) { $defaultBranch = 'main' }
     $remoteBase = "origin/$defaultBranch"
 
-    # Determine initial mode from params, or prompt
-    $mode = if ($Local) { 'l' } elseif ($Remote) { 'r' } else { $null }
-
-    if (-not $mode) {
-        Write-Host ""
-        Write-Host "  Show merged branches:" -ForegroundColor Yellow
-        Write-Host "  [l] Local only" -ForegroundColor Cyan
-        Write-Host "  [r] Remote only" -ForegroundColor Cyan
-        Write-Host "  [b] Both" -ForegroundColor Cyan
-        Write-Host "  [q] Quit" -ForegroundColor DarkGray
-        Write-Host ""
-        $mode = (Read-Host "  Choice").Trim().ToLower()
-        if ($mode -eq 'q' -or $mode -eq '') { return }
-        if ($mode -notin @('l','r','b')) {
-            Write-Host "  Unknown choice." -ForegroundColor DarkGray
-            return
-        }
-    }
+    # Determine mode from params; default to both
+    $mode = if ($Local) { 'l' } elseif ($Remote) { 'r' } else { 'b' }
 
     while ($true) {
         $candidates = switch ($mode) {
