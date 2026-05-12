@@ -236,11 +236,34 @@ Set-Alias g git
 git config --global alias.lg "log --graph --decorate --date=relative --format=format:'%C(yellow)%h%Creset %C(cyan)%d%Creset %s %C(green)%cr%Creset by %C(bold blue)%an%Creset'" 2>$null
 
 # Git commit shortcuts
-function gcm { git commit -m $args }
-function gcam { git commit -a -m $args }
-function gcad { git commit -a --amend $args }
+function _Get-GitCommitMessage {
+    $branch    = git rev-parse --abbrev-ref HEAD 2>$null
+    $porcelain = git status --porcelain
+    $added     = ($porcelain | Where-Object { $_ -match '^\?\?|^A' }).Count
+    $modified  = ($porcelain | Where-Object { $_ -match '^[ MARC]M|^M' }).Count
+    $deleted   = ($porcelain | Where-Object { $_ -match '^[ MARC]D|^D' }).Count
+    "$branch | $(Get-Date -Format 'yyyy-MM-dd HH:mm') | +$added ~$modified -$deleted"
+}
+function gcm {
+    param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
+    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    git commit -m $Message @ExtraArgs
+}
+function gcam {
+    param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
+    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    git commit -a -m $Message @ExtraArgs
+}
+function gcad {
+    param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
+    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    git commit -a --amend -m $Message @ExtraArgs
+}
 function glg { git lg $args }
-function gs { git status }
+function gs {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args) { git status @Args } else { git status -s -b }
+}
 
 # Git grep with enhanced formatting and color
 function gg {
@@ -283,7 +306,12 @@ Set-Alias gitgrep gg
 
 # List branches sorted by last commit date
 function gb {
-    git branch --sort=-committerdate --format="%(color:yellow)%(refname:short)%(color:reset)  %(color:green)%(committerdate:relative)%(color:reset)  %(subject)"
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args) {
+        git branch @Args
+    } else {
+        git branch --sort=-committerdate --format="%(color:yellow)%(refname:short)%(color:reset)  %(color:green)%(committerdate:relative)%(color:reset)  %(subject)"
+    }
 }
 
 # Git undo last commit (keep changes)
@@ -292,10 +320,49 @@ function gundo {
     Write-Host "Last commit undone (changes kept)" -ForegroundColor Green
 }
 
-# Git clean branches (delete merged branches)
+# Git clean branches (interactive selection)
 function gclean {
-    git branch --merged | Where-Object { $_ -notmatch "main|master|\*" } | ForEach-Object { git branch -d $_.Trim() }
-    Write-Host "Cleaned merged branches" -ForegroundColor Green
+    while ($true) {
+        $candidates = git branch --merged |
+            Where-Object { $_ -notmatch 'main|master|\*' } |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -ne '' }
+
+        if (-not $candidates) {
+            Write-Host "  No merged branches to clean." -ForegroundColor DarkGray
+            return
+        }
+
+        Write-Host ""
+        Write-Host "  Merged branches:" -ForegroundColor Yellow
+        for ($i = 0; $i -lt $candidates.Count; $i++) {
+            Write-Host ("  [{0}] {1}" -f ($i + 1), $candidates[$i]) -ForegroundColor Cyan
+        }
+        Write-Host "  [a] Delete all" -ForegroundColor Red
+        Write-Host "  [q] Quit" -ForegroundColor DarkGray
+        Write-Host ""
+
+        $input = (Read-Host "  Choice").Trim().ToLower()
+
+        if ($input -eq 'q' -or $input -eq '') {
+            return
+        } elseif ($input -eq 'a') {
+            $candidates | ForEach-Object {
+                git branch -d $_
+                Write-Host ("  Deleted: {0}" -f $_) -ForegroundColor Green
+            }
+        } elseif ($input -match '^\d+$') {
+            $idx = [int]$input - 1
+            if ($idx -ge 0 -and $idx -lt $candidates.Count) {
+                git branch -d $candidates[$idx]
+                Write-Host ("  Deleted: {0}" -f $candidates[$idx]) -ForegroundColor Green
+            } else {
+                Write-Host "  Invalid number." -ForegroundColor DarkGray
+            }
+        } else {
+            Write-Host "  Unknown input." -ForegroundColor DarkGray
+        }
+    }
 }
 
 # Quick git add, commit, push
@@ -312,15 +379,17 @@ function gp {
 Remove-Item Alias:gp -Force -ErrorAction SilentlyContinue
 
 function gacp {
-    param($Message = "$(Get-Date -Format 'yyyy-MM-dd HH:mm') | $((git status --porcelain | Measure-Object).Count) file(s) changed")
+    param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
+    if (-not $Message) { $Message = _Get-GitCommitMessage }
     git add .
-    git commit -m $Message
+    git commit -m $Message @ExtraArgs
     gp
 }
 
 # Git show changed files
 function gfiles {
-    git diff --name-only
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args) { git diff --name-only @Args } else { git diff --name-only }
 }
 
 # Git stash with message
@@ -331,7 +400,8 @@ function gss {
 
 # List git stashes
 function gsl {
-    git stash list
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args) { git stash list @Args } else { git stash list }
 }
 
 # Create a new worktree and branch from within current git directory.
