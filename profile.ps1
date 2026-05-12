@@ -299,11 +299,22 @@ function gclean {
 }
 
 # Quick git add, commit, push
+function gp {
+    $branch = git rev-parse --abbrev-ref HEAD 2>$null
+    git rev-parse --abbrev-ref '@{u}' 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      No upstream — pushing and tracking origin/$branch" -ForegroundColor DarkGray
+        git push --set-upstream origin $branch
+    } else {
+        git push
+    }
+}
+
 function gacp {
     param($Message = "$(Get-Date -Format 'yyyy-MM-dd HH:mm') | $((git status --porcelain | Measure-Object).Count) file(s) changed")
     git add .
     git commit -m $Message
-    git push
+    gp
 }
 
 # Git show changed files
