@@ -322,11 +322,72 @@ function gundo {
 
 # Git clean branches (interactive selection)
 function gclean {
-    while ($true) {
-        $candidates = git branch -r --merged |
+    param(
+        [Alias('l')][switch]$Local,
+        [Alias('r')][switch]$Remote
+    )
+
+    function _gclean-delete {
+        param([string]$Branch, [string]$Type)
+        if ($Type -eq 'L') {
+            git branch -d $Branch 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host ("  Deleted local:  {0}" -f $Branch) -ForegroundColor Green
+            } else {
+                Write-Host ("  Failed to delete local: {0} (not fully merged?)" -f $Branch) -ForegroundColor Red
+            }
+        } else {
+            $remoteName = $Branch -replace '^origin/', ''
+            git push origin --delete $remoteName 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host ("  Deleted remote: {0}" -f $Branch) -ForegroundColor Green
+            } else {
+                Write-Host ("  Failed to delete remote: {0}" -f $Branch) -ForegroundColor Red
+            }
+        }
+    }
+
+    function _gclean-get-local {
+        git branch --merged |
             Where-Object { $_ -notmatch 'main|master|\*' } |
             ForEach-Object { $_.Trim() } |
-            Where-Object { $_ -ne '' }
+            Where-Object { $_ -ne '' } |
+            ForEach-Object { [PSCustomObject]@{ Name = $_; Type = 'L' } }
+    }
+
+    function _gclean-get-remote {
+        git branch -r --merged |
+            Where-Object { $_ -notmatch 'main|master|\*|HEAD' } |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -ne '' } |
+            ForEach-Object { [PSCustomObject]@{ Name = $_; Type = 'R' } }
+    }
+
+    # Determine initial mode from params, or prompt
+    $mode = if ($Local) { 'l' } elseif ($Remote) { 'r' } else { $null }
+
+    if (-not $mode) {
+        Write-Host ""
+        Write-Host "  Show merged branches:" -ForegroundColor Yellow
+        Write-Host "  [l] Local only" -ForegroundColor Cyan
+        Write-Host "  [r] Remote only" -ForegroundColor Cyan
+        Write-Host "  [b] Both" -ForegroundColor Cyan
+        Write-Host "  [q] Quit" -ForegroundColor DarkGray
+        Write-Host ""
+        $mode = (Read-Host "  Choice").Trim().ToLower()
+        if ($mode -eq 'q' -or $mode -eq '') { return }
+        if ($mode -notin @('l','r','b')) {
+            Write-Host "  Unknown choice." -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    while ($true) {
+        $candidates = switch ($mode) {
+            'l' { _gclean-get-local }
+            'r' { _gclean-get-remote }
+            'b' { @(_gclean-get-local) + @(_gclean-get-remote) }
+        }
 
         if (-not $candidates) {
             Write-Host "  No merged branches to clean." -ForegroundColor DarkGray
@@ -336,10 +397,16 @@ function gclean {
         Write-Host ""
         Write-Host "  Merged branches:" -ForegroundColor Yellow
         for ($i = 0; $i -lt $candidates.Count; $i++) {
-            Write-Host ("  [{0}] {1}" -f ($i + 1), $candidates[$i]) -ForegroundColor Cyan
+            $tag = if ($mode -eq 'b') { "  [$($candidates[$i].Type)]" } else { '' }
+            Write-Host ("  [{0}] {1}{2}" -f ($i + 1), $candidates[$i].Name, $tag) -ForegroundColor Cyan
         }
-        Write-Host "  [a] Delete all" -ForegroundColor Red
-        Write-Host "  [q] Quit" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  [a]  Delete all" -ForegroundColor Red
+        if ($mode -eq 'b') {
+            Write-Host "  [al] Delete all local" -ForegroundColor Red
+            Write-Host "  [ar] Delete all remote" -ForegroundColor Red
+        }
+        Write-Host "  [q]  Quit" -ForegroundColor DarkGray
         Write-Host ""
 
         $input = (Read-Host "  Choice").Trim().ToLower()
@@ -347,15 +414,15 @@ function gclean {
         if ($input -eq 'q' -or $input -eq '') {
             return
         } elseif ($input -eq 'a') {
-            $candidates | ForEach-Object {
-                git branch -r -d $_
-                Write-Host ("  Deleted: {0}" -f $_) -ForegroundColor Green
-            }
+            $candidates | ForEach-Object { _gclean-delete $_.Name $_.Type }
+        } elseif ($input -eq 'al' -and $mode -eq 'b') {
+            $candidates | Where-Object { $_.Type -eq 'L' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
+        } elseif ($input -eq 'ar' -and $mode -eq 'b') {
+            $candidates | Where-Object { $_.Type -eq 'R' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
         } elseif ($input -match '^\d+$') {
             $idx = [int]$input - 1
             if ($idx -ge 0 -and $idx -lt $candidates.Count) {
-                git branch -r -d $candidates[$idx]
-                Write-Host ("  Deleted: {0}" -f $candidates[$idx]) -ForegroundColor Green
+                _gclean-delete $candidates[$idx].Name $candidates[$idx].Type
             } else {
                 Write-Host "  Invalid number." -ForegroundColor DarkGray
             }
