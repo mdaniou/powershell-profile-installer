@@ -401,6 +401,7 @@ function gclean {
             Write-Host ("  [{0}] {1}{2}" -f ($i + 1), $candidates[$i].Name, $tag) -ForegroundColor Cyan
         }
         Write-Host ""
+        Write-Host "  [1-N] Delete by number" -ForegroundColor Cyan
         Write-Host "  [a]  Delete all" -ForegroundColor Red
         if ($mode -eq 'b') {
             Write-Host "  [al] Delete all local" -ForegroundColor Red
@@ -409,18 +410,18 @@ function gclean {
         Write-Host "  [q]  Quit" -ForegroundColor DarkGray
         Write-Host ""
 
-        $input = (Read-Host "  Choice").Trim().ToLower()
+        $choice = (Read-Host "  Choice").Trim().ToLower()
 
-        if ($input -eq 'q' -or $input -eq '') {
+        if ($choice -eq 'q' -or $choice -eq '') {
             return
-        } elseif ($input -eq 'a') {
+        } elseif ($choice -eq 'a') {
             $candidates | ForEach-Object { _gclean-delete $_.Name $_.Type }
-        } elseif ($input -eq 'al' -and $mode -eq 'b') {
+        } elseif ($choice -eq 'al' -and $mode -eq 'b') {
             $candidates | Where-Object { $_.Type -eq 'L' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
-        } elseif ($input -eq 'ar' -and $mode -eq 'b') {
+        } elseif ($choice -eq 'ar' -and $mode -eq 'b') {
             $candidates | Where-Object { $_.Type -eq 'R' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
-        } elseif ($input -match '^\d+$') {
-            $idx = [int]$input - 1
+        } elseif ($choice -match '^\d+$') {
+            $idx = [int]$choice - 1
             if ($idx -ge 0 -and $idx -lt $candidates.Count) {
                 _gclean-delete $candidates[$idx].Name $candidates[$idx].Type
             } else {
