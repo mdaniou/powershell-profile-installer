@@ -323,7 +323,7 @@ function gundo {
 # Git clean branches (interactive selection)
 function gclean {
     while ($true) {
-        $candidates = git branch --merged |
+        $candidates = git branch -r --merged |
             Where-Object { $_ -notmatch 'main|master|\*' } |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -ne '' }
@@ -348,13 +348,13 @@ function gclean {
             return
         } elseif ($input -eq 'a') {
             $candidates | ForEach-Object {
-                git branch -d $_
+                git branch -r -d $_
                 Write-Host ("  Deleted: {0}" -f $_) -ForegroundColor Green
             }
         } elseif ($input -match '^\d+$') {
             $idx = [int]$input - 1
             if ($idx -ge 0 -and $idx -lt $candidates.Count) {
-                git branch -d $candidates[$idx]
+                git branch -r -d $candidates[$idx]
                 Write-Host ("  Deleted: {0}" -f $candidates[$idx]) -ForegroundColor Green
             } else {
                 Write-Host "  Invalid number." -ForegroundColor DarkGray
