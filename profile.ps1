@@ -487,8 +487,9 @@ function gwa {
         return
     }
 
-    $base = git rev-parse --show-toplevel
-    $path = "$base--$Branch"
+    $base = (git rev-parse --show-toplevel) -replace '/', [System.IO.Path]::DirectorySeparatorChar
+    $safeBranch = $Branch -replace '/', '-'
+    $path = "$base--$safeBranch"
 
     Write-Host "Creating worktree " -NoNewline
     Write-Host $path -ForegroundColor Cyan
@@ -507,17 +508,38 @@ function gwa {
 # Remove worktree and branch from within active worktree directory.
 function gwd {
     $cwd = (Get-Location).Path
-    $worktree = Split-Path -Leaf $cwd
-    $parts = $worktree -split '--', 2
-    if ($parts.Count -lt 2) {
+
+    $worktrees = git worktree list --porcelain |
+        Select-String "^worktree" |
+        ForEach-Object { $_.Line -replace "^worktree ", "" }
+
+    if ($worktrees.Count -lt 2) {
+        Write-Host "Not inside a worktree (no secondary worktrees exist)"
+        return
+    }
+
+    $mainPath = $worktrees[0]
+
+    $normalizedCwd = $cwd.TrimEnd('\').Replace('\', '/')
+    $normalizedMain = $mainPath.TrimEnd('/').Replace('\', '/')
+
+    if ($normalizedCwd -ieq $normalizedMain) {
+        Write-Host "Cannot remove the main worktree"
+        return
+    }
+
+    $isWorktree = $worktrees | Where-Object {
+        $_.TrimEnd('/').Replace('\', '/') -ieq $normalizedCwd
+    }
+    if (-not $isWorktree) {
         Write-Host "Not inside a worktree directory (expected name like 'repo--branch')"
         return
     }
-    $root = $parts[0]
-    $branch = $parts[1]
+
+    $branch = git rev-parse --abbrev-ref HEAD
     $confirm = Read-Host "Remove worktree and branch '$branch'? (y/N)"
     if ($confirm -eq 'y') {
-        Set-Location "..\$root"
+        Set-Location $mainPath
         git worktree remove $cwd --force
         if ($LASTEXITCODE -eq 0) {
             git branch -D $branch
