@@ -64,7 +64,7 @@ function Get-GitStatus {
 }
 
 function prompt {
-  
+
     # Assign Windows Title Text
     $host.ui.RawUI.WindowTitle = "Current Folder: $pwd"
 
@@ -86,9 +86,9 @@ function prompt {
 
     try {
         $LastCommand = Get-History -Count 1 -ErrorAction Stop
-        if ($lastCommand) { 
-            $RunTime = ($lastCommand.EndExecutionTime - $lastCommand.StartExecutionTime).TotalSeconds 
-            
+        if ($lastCommand) {
+            $RunTime = ($lastCommand.EndExecutionTime - $lastCommand.StartExecutionTime).TotalSeconds
+
             if ($RunTime -ge 60) {
                 $ts = [timespan]::fromseconds($RunTime)
                 $min, $sec = ($ts.ToString("mm\:ss")).Split(":")
@@ -153,9 +153,9 @@ Write-Host "[3/9] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring file operations..." -ForegroundColor Green
 
 # Create new file (Unix-style touch command)
-function touch { 
-    param ($file = 'NewFile.txt') 
-    New-Item $file -Force | Out-Null 
+function touch {
+    param ($file = 'NewFile.txt')
+    New-Item $file -Force | Out-Null
 }
 
 # Grep alias for Select-String
@@ -173,25 +173,25 @@ function fif {
         [Parameter(Mandatory=$true)]$Pattern,
         [string]$Path = "."
     )
-    Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue | 
-        Select-String -Pattern $Pattern | 
+    Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue |
+        Select-String -Pattern $Pattern |
         Select-Object Path, LineNumber, Line
 }
 
 # Quick directory size
 function dsize {
     param([string]$Path = ".")
-    Get-ChildItem -Path $Path -Recurse -ErrorAction SilentlyContinue | 
-        Measure-Object -Property Length -Sum | 
+    Get-ChildItem -Path $Path -Recurse -ErrorAction SilentlyContinue |
+        Measure-Object -Property Length -Sum |
         Select-Object @{Name="Size(MB)";Expression={[math]::Round($_.Sum / 1MB, 2)}}
 }
 
 # List largest files in current directory
 function big {
     param([int]$Top = 10)
-    Get-ChildItem -File -Recurse -ErrorAction SilentlyContinue | 
-        Sort-Object Length -Descending | 
-        Select-Object -First $Top | 
+    Get-ChildItem -File -Recurse -ErrorAction SilentlyContinue |
+        Sort-Object Length -Descending |
+        Select-Object -First $Top |
         Select-Object @{Name="Size(MB)";Expression={[math]::Round($_.Length / 1MB, 2)}}, FullName
 }
 
@@ -451,7 +451,7 @@ function gacp {
     if (-not $Message) { $Message = _Get-GitCommitMessage }
     git add .
     git commit -m $Message @ExtraArgs
-    gp
+    Get-ItemProperty
 }
 
 # Git show changed files
@@ -632,7 +632,7 @@ Write-Host "Loading network utilities..." -ForegroundColor Green
 
 # List all local IP addresses
 function inet {
-    Get-NetIPAddress | 
+    Get-NetIPAddress |
         Where-Object {$_.AddressFamily -eq "IPv4" -and $_.IPAddress -NotLike "169.*" -and $_.IPAddress -NotLike "127.*"} |
         Select-Object IPAddress, InterfaceAlias
 }
@@ -679,7 +679,7 @@ function sysinfo {
     $memUsed = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / 1MB, 2)
     $memTotal = [math]::Round($mem.TotalVisibleMemorySize / 1MB, 2)
     $memPercent = [math]::Round(($memUsed / $memTotal) * 100, 2)
-    
+
     Write-Host "`nSystem Resources:" -ForegroundColor Cyan
     Write-Host "  CPU Usage: $cpu%" -ForegroundColor Yellow
     Write-Host ("  Memory: {0} MB / {1} MB {2}%" -f $memUsed, $memTotal, $memPercent) -ForegroundColor Yellow
@@ -688,9 +688,9 @@ function sysinfo {
 
 # List installed software
 function apps {
-    Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | 
-        Select-Object DisplayName, DisplayVersion, Publisher | 
-        Where-Object DisplayName -ne $null | 
+    Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
+        Select-Object DisplayName, DisplayVersion, Publisher |
+        Where-Object DisplayName -ne $null |
         Sort-Object DisplayName
 }
 
@@ -723,13 +723,13 @@ function helper {
     Write-Host "              PowerShell Profile - Command Reference                     " -ForegroundColor Cyan
     Write-Host "==========================================================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Write-Host "  NAVIGATION" -ForegroundColor Magenta
     Write-Host "  .." -ForegroundColor Yellow -NoNewline; Write-Host "          Go up 1 directory"
     Write-Host "  ..." -ForegroundColor Yellow -NoNewline; Write-Host "         Go up 2 directories"
     Write-Host "  ...." -ForegroundColor Yellow -NoNewline; Write-Host "        Go up 3 directories"
     Write-Host ""
-    
+
     Write-Host "  FILE OPERATIONS" -ForegroundColor Magenta
     Write-Host "  touch" -ForegroundColor Yellow -NoNewline; Write-Host "       Create a file (Unix-style)"
     Write-Host "  ff" -ForegroundColor Yellow -NoNewline; Write-Host "          Find files by name: ff PATTERN"
@@ -742,7 +742,7 @@ function helper {
     Write-Host "  open" -ForegroundColor Yellow -NoNewline; Write-Host "        Open directory in Explorer: open [path]"
     Write-Host "  grep" -ForegroundColor Yellow -NoNewline; Write-Host "        Alias for Select-String"
     Write-Host ""
-    
+
     Write-Host "  GIT COMMANDS" -ForegroundColor Magenta
     Write-Host "  g" -ForegroundColor Yellow -NoNewline; Write-Host "           Alias for git"
     Write-Host "  gs" -ForegroundColor Yellow -NoNewline; Write-Host "          git status"
@@ -763,20 +763,20 @@ function helper {
     Write-Host "  gwl" -ForegroundColor Yellow -NoNewline; Write-Host "         Move to the other worktrees."
     Write-Host "  gwclean" -ForegroundColor Yellow -NoNewline; Write-Host "     Delete all worktress."
     Write-Host ""
-    
+
     Write-Host "  NETWORK" -ForegroundColor Magenta
     Write-Host "  inet" -ForegroundColor Yellow -NoNewline; Write-Host "        List all local IP addresses"
     Write-Host "  myip" -ForegroundColor Yellow -NoNewline; Write-Host "        Get public IP (copied to clipboard)"
     Write-Host "  nsl" -ForegroundColor Yellow -NoNewline; Write-Host "         DNS lookup: nsl DOMAIN"
     Write-Host "  ports" -ForegroundColor Yellow -NoNewline; Write-Host "       Show all listening ports"
     Write-Host ""
-    
+
     Write-Host "  SYSTEM INFO" -ForegroundColor Magenta
     Write-Host "  sysinfo" -ForegroundColor Yellow -NoNewline; Write-Host "     Display CPU and memory usage"
     Write-Host "  apps" -ForegroundColor Yellow -NoNewline; Write-Host "        List installed software"
     Write-Host "  uptime" -ForegroundColor Yellow -NoNewline; Write-Host "      Show system uptime"
     Write-Host ""
-    
+
     Write-Host "  POWERSHELL" -ForegroundColor Magenta
     Write-Host "  fn" -ForegroundColor Yellow -NoNewline; Write-Host "                    View function source: fn FUNCTION-NAME"
     Write-Host "  helper" -ForegroundColor Yellow -NoNewline; Write-Host "                Display this command reference"
@@ -787,7 +787,7 @@ function helper {
     Write-Host "  profile script add" -ForegroundColor Yellow -NoNewline; Write-Host "    Add a folder or .ps1 file: profile script add <path>"
     Write-Host "  profile script remove" -ForegroundColor Yellow -NoNewline; Write-Host " Remove a path by number:    profile script remove <n>"
     Write-Host ""
-    
+
     Write-Host "  TIP: " -ForegroundColor Cyan -NoNewline
     Write-Host "Use " -NoNewline
     Write-Host "fn FUNCTION-NAME" -ForegroundColor Yellow -NoNewline

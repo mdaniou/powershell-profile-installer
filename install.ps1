@@ -27,20 +27,20 @@ $SourceCliScript = Join-Path $PSScriptRoot "profile-cli.ps1"
 # SMART PATH DETECTION
 # ==============================================================================
 
-function Get-DocumentsPaths {
+function Get-DocumentsPath {
     <#
     .SYNOPSIS
         Get all relevant Documents paths (OneDrive and Local)
     #>
-    
+
     $paths = @{}
-    
+
     # Standard Documents folder (might be OneDrive-redirected)
     $standardDocs = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
-    
+
     # Local Documents folder
     $localDocs = Join-Path $env:USERPROFILE "Documents"
-    
+
     # Determine which to use based on -Local switch
     if ($Local) {
         $paths.Primary = $localDocs
@@ -55,7 +55,7 @@ function Get-DocumentsPaths {
         $paths.IsOneDrive = $false
         $paths.Message = "Using local Documents"
     }
-    
+
     return $paths
 }
 
@@ -104,10 +104,10 @@ function Show-Configuration {
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "  Configuration Detection" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
-    
+
     Write-Host "  Documents Folder: " -ForegroundColor White
     Write-Path "$DocumentsPath"
-    
+
     if ($docsConfig.IsOneDrive) {
         Write-Host "      [INFO] OneDrive-redirected Documents detected" -ForegroundColor Cyan
         Write-Host "             Loaders will be created in OneDrive folder" -ForegroundColor DarkGray
@@ -115,11 +115,11 @@ function Show-Configuration {
     } else {
         Write-Host "      [INFO] Local Documents folder" -ForegroundColor Green
     }
-    
+
     Write-Host "`n  Master Profile Location (Local, not synced): " -ForegroundColor White
     Write-Path "$MasterProfile"
     Write-Path "(Stored in %LOCALAPPDATA%, never synced by OneDrive)"
-    
+
     Write-Host "`n  Profile Loaders Will Be Created At:" -ForegroundColor White
     foreach ($location in $ProfileLocations) {
         Write-Path "$location"
@@ -131,7 +131,7 @@ function Uninstall-Profile {
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "  Uninstalling Profile" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
-    
+
     # Remove loader files
     $removedCount = 0
     foreach ($location in $ProfileLocations) {
@@ -142,11 +142,11 @@ function Uninstall-Profile {
             $removedCount++
         }
     }
-    
+
     if ($removedCount -eq 0) {
         Write-Info "No loaders found to remove"
     }
-    
+
     # Remove master profile
     if (Test-Path $MasterProfileDir) {
         Remove-Item $MasterProfileDir -Recurse -Force
@@ -155,7 +155,7 @@ function Uninstall-Profile {
     } else {
         Write-Info "Master profile directory not found"
     }
-    
+
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "  Uninstall Complete!" -ForegroundColor Green
     Write-Host "========================================`n" -ForegroundColor Cyan
@@ -229,7 +229,7 @@ $LoaderScript = @"
 # Auto-generated profile loader
 # Last updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 # Master profile: $MasterProfile
-# 
+#
 # This is just a loader. The actual profile is stored in:
 # %LOCALAPPDATA%\PSProfile\profile.ps1 (local to machine, not synced)
 #
@@ -248,7 +248,7 @@ $skippedCount = 0
 
 foreach ($location in $ProfileLocations) {
     $dir = Split-Path $location
-    
+
     # Create directory if needed
     if (!(Test-Path $dir)) {
         try {
@@ -262,7 +262,7 @@ foreach ($location in $ProfileLocations) {
             continue
         }
     }
-    
+
     # Backup existing profile if it's not a loader
     if (Test-Path $location) {
         $content = Get-Content $location -Raw -ErrorAction SilentlyContinue
@@ -273,7 +273,7 @@ foreach ($location in $ProfileLocations) {
             Write-Path "$backup"
         }
     }
-    
+
     # Install loader
     try {
         $LoaderScript | Out-File $location -Encoding UTF8 -Force
