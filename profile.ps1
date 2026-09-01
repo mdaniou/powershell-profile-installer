@@ -454,7 +454,7 @@ function gacp {
     if (-not $Message) { $Message = Get-GitCommitMessageTemplate }
     git add .
     git commit -m $Message @ExtraArgs
-    gp
+    Get-ItemProperty
 }
 
 # Git show changed files

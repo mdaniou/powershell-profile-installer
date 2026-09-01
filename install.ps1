@@ -32,7 +32,6 @@ function Get-DocumentsPath {
     .SYNOPSIS
         Get the relevant Documents path (OneDrive or Local)
     #>
-    param([switch]$Local)
 
     $paths = @{}
 
