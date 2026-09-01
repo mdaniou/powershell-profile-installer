@@ -20,7 +20,7 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # ============================================================================
 # PROMPT CUSTOMIZATION
 # ============================================================================
-Write-Host "[1/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[1/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring custom prompt..." -ForegroundColor Green
 
 function Get-GitStatus {
@@ -136,7 +136,7 @@ Write-Host "      [OK] Custom prompt configured" -ForegroundColor DarkGray
 # ============================================================================
 # NAVIGATION SHORTCUTS
 # ============================================================================
-Write-Host "[2/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[2/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up navigation shortcuts..." -ForegroundColor Green
 
 function .. { Set-Location .. }
@@ -149,7 +149,7 @@ Write-Host "      [OK] Navigation shortcuts: .. ... ...." -ForegroundColor DarkG
 # ============================================================================
 # FILE OPERATIONS
 # ============================================================================
-Write-Host "[3/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[3/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring file operations..." -ForegroundColor Green
 
 # Create new file (Unix-style touch command)
@@ -226,7 +226,7 @@ Write-Host "      [OK] File operations: touch, grep, ff, fif, dsize, big, mkcd, 
 # ============================================================================
 # GIT CONFIGURATION
 # ============================================================================
-Write-Host "[4/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[4/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up Git aliases and functions..." -ForegroundColor Green
 
 # Git alias
@@ -628,9 +628,111 @@ Write-Host "      [OK] Git: g, gs, gcm, gcam, gcad, glg, gb, gg, gundo, gclean, 
 
 
 # ============================================================================
+# TERRAFORM
+# ============================================================================
+Write-Host "[5/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "Setting up Terraform shortcuts..." -ForegroundColor Green
+
+$script:hasTerraform = [bool](Get-Command terraform -ErrorAction SilentlyContinue)
+
+function t {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    terraform @PassthroughArgs
+}
+function ti {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    terraform init @PassthroughArgs
+}
+function tp {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { terraform plan @PassthroughArgs } else { terraform plan -out=tfplan }
+}
+function ta {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) {
+        terraform apply @PassthroughArgs
+    } elseif (Test-Path "tfplan") {
+        terraform apply tfplan
+    } else {
+        terraform apply
+    }
+}
+function tv {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    terraform validate @PassthroughArgs
+}
+function tfmt {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { terraform fmt @PassthroughArgs } else { terraform fmt -recursive }
+}
+function to {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    terraform output @PassthroughArgs
+}
+function ts {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { terraform state @PassthroughArgs } else { terraform state list }
+}
+function tw {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { terraform workspace @PassthroughArgs } else { terraform workspace list }
+}
+
+if ($script:hasTerraform) {
+    Write-Host "      [OK] Terraform: t, ti, tp, ta, tv, tfmt, to, ts, tw" -ForegroundColor DarkGray
+} else {
+    Write-Host "      [OK] Terraform: t, ti, tp, ta, tv, tfmt, to, ts, tw (terraform not found on PATH)" -ForegroundColor DarkGray
+}
+
+
+# ============================================================================
+# AZURE CLI
+# ============================================================================
+Write-Host "[6/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "Setting up Azure CLI shortcuts..." -ForegroundColor Green
+
+$script:hasAzCli = [bool](Get-Command az -ErrorAction SilentlyContinue)
+
+function azl {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    az login @PassthroughArgs
+}
+function azs {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) {
+        az account set @PassthroughArgs
+    } else {
+        az account list -o table
+    }
+}
+function azacct {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    az account show -o table @PassthroughArgs
+}
+function azg {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    az group list -o table @PassthroughArgs
+}
+function azvm {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    az vm list -d -o table @PassthroughArgs
+}
+function azaks {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    az aks list -o table @PassthroughArgs
+}
+
+if ($script:hasAzCli) {
+    Write-Host "      [OK] Azure: azl, azs, azacct, azg, azvm, azaks" -ForegroundColor DarkGray
+} else {
+    Write-Host "      [OK] Azure: azl, azs, azacct, azg, azvm, azaks (az not found on PATH)" -ForegroundColor DarkGray
+}
+
+
+# ============================================================================
 # NETWORK UTILITIES
 # ============================================================================
-Write-Host "[5/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[7/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading network utilities..." -ForegroundColor Green
 
 # List all local IP addresses
@@ -672,7 +774,7 @@ Write-Host "      [OK] Network: inet, ports, myip, nsl" -ForegroundColor DarkGra
 # ============================================================================
 # SYSTEM INFORMATION
 # ============================================================================
-Write-Host "[6/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[8/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading system information utilities..." -ForegroundColor Green
 
 # System resource usage
@@ -710,7 +812,7 @@ Write-Host "      [OK] System info: sysinfo, apps, uptime" -ForegroundColor Dark
 # ============================================================================
 # POWERSHELL UTILITIES
 # ============================================================================
-Write-Host "[7/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[9/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring PowerShell utilities..." -ForegroundColor Green
 
 # View function source code quickly
@@ -765,6 +867,27 @@ function helper {
     Write-Host "  gwd" -ForegroundColor Yellow -NoNewline; Write-Host "         Remove worktree and branch from within active worktree directory"
     Write-Host "  gwl" -ForegroundColor Yellow -NoNewline; Write-Host "         Move to the other worktrees."
     Write-Host "  gwclean" -ForegroundColor Yellow -NoNewline; Write-Host "     Delete all worktress."
+    Write-Host ""
+
+    Write-Host "  TERRAFORM" -ForegroundColor Magenta
+    Write-Host "  t" -ForegroundColor Yellow -NoNewline; Write-Host "           terraform: t ARGS"
+    Write-Host "  ti" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform init"
+    Write-Host "  tp" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform plan -out=tfplan"
+    Write-Host "  ta" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform apply (uses tfplan if present)"
+    Write-Host "  tv" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform validate"
+    Write-Host "  tfmt" -ForegroundColor Yellow -NoNewline; Write-Host "        terraform fmt -recursive"
+    Write-Host "  to" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform output"
+    Write-Host "  ts" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform state list: ts ARGS"
+    Write-Host "  tw" -ForegroundColor Yellow -NoNewline; Write-Host "          terraform workspace list: tw ARGS"
+    Write-Host ""
+
+    Write-Host "  AZURE CLI" -ForegroundColor Magenta
+    Write-Host "  azl" -ForegroundColor Yellow -NoNewline; Write-Host "         az login: azl ARGS"
+    Write-Host "  azs" -ForegroundColor Yellow -NoNewline; Write-Host "         az account set/list: azs [SUBSCRIPTION]"
+    Write-Host "  azacct" -ForegroundColor Yellow -NoNewline; Write-Host "      az account show"
+    Write-Host "  azg" -ForegroundColor Yellow -NoNewline; Write-Host "         az group list"
+    Write-Host "  azvm" -ForegroundColor Yellow -NoNewline; Write-Host "        az vm list -d"
+    Write-Host "  azaks" -ForegroundColor Yellow -NoNewline; Write-Host "       az aks list"
     Write-Host ""
 
     Write-Host "  NETWORK" -ForegroundColor Magenta
@@ -885,7 +1008,7 @@ Write-Host "      [OK] PowerShell utilities: fn, helper, profile, rn, cpl, cw" -
 # ============================================================================
 # AUTO-EXECUTE SCRIPTS
 # ============================================================================
-Write-Host "[8/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[10/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading auto-execute scripts..." -ForegroundColor Green
 
 $psConfigPath = Join-Path $env:LOCALAPPDATA "PSProfile\config.json"
@@ -939,7 +1062,7 @@ if ($autoExecPaths.Count -eq 0) {
 # ============================================================================
 # STARTUP
 # ============================================================================
-Write-Host "[9/9] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[11/11] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting default location..." -ForegroundColor Green
 
 # Detect if we're in a "user-selected" directory
