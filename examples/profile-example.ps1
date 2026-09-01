@@ -21,7 +21,7 @@ function prompt {
     $Date = Get-Date -Format 'dd/MM/yyyy hh:mm:ss tt'
     $IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     $version = "$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
-    
+
     $ElapsedTime = "0 sec"
     try {
         $LastCommand = Get-History -Count 1 -ErrorAction Stop
@@ -36,8 +36,8 @@ function prompt {
                 $ElapsedTime = -join (($ElapsedTime.ToString()), " sec")
             }
         }
-    } catch {}
-    
+    } catch { Write-Verbose "Could not get last command run time: $_" }
+
     Write-Host ""
     Write-Host ($(if ($IsAdmin) { 'Elevated ' } else { '' })) -BackgroundColor DarkRed -ForegroundColor White -NoNewline
     Write-Host "v$version " -BackgroundColor DarkMagenta -ForegroundColor White -NoNewline

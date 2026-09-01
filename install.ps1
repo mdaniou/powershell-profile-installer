@@ -30,7 +30,7 @@ $SourceCliScript = Join-Path $PSScriptRoot "profile-cli.ps1"
 function Get-DocumentsPath {
     <#
     .SYNOPSIS
-        Get all relevant Documents paths (OneDrive and Local)
+        Get the relevant Documents path (OneDrive or Local)
     #>
 
     $paths = @{}
@@ -60,7 +60,7 @@ function Get-DocumentsPath {
 }
 
 # Get Documents configuration
-$docsConfig = Get-DocumentsPaths
+$docsConfig = Get-DocumentsPath -Local:$Local
 $DocumentsPath = $docsConfig.Primary
 
 # Master profile location (avoid Documents entirely for master copy)

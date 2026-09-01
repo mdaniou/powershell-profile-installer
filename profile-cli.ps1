@@ -26,28 +26,28 @@ function profile {
     )
 
     switch ($Command.ToLower()) {
-        ''       { _profile-help }
-        'reload' { _profile-reload -Silent:$Silent }
+        ''       { Get-ProfileCliHelp }
+        'reload' { Invoke-ProfileCliReload -Silent:$Silent }
         'script' {
             switch ($SubCommand.ToLower()) {
-                'list'   { _profile-script-list }
-                'add'    { _profile-script-add $Arg }
-                'remove' { _profile-script-remove $Arg }
-                ''       { _profile-script-help }
+                'list'   { Get-ProfileCliScriptList }
+                'add'    { Add-ProfileCliScriptPath $Arg }
+                'remove' { Remove-ProfileCliScriptPath $Arg }
+                ''       { Get-ProfileCliScriptHelp }
                 default  {
                     Write-Host "  Unknown subcommand: $SubCommand" -ForegroundColor Red
-                    _profile-script-help
+                    Get-ProfileCliScriptHelp
                 }
             }
         }
         default {
             Write-Host "  Unknown command: $Command" -ForegroundColor Red
-            _profile-help
+            Get-ProfileCliHelp
         }
     }
 }
 
-function _profile-help {
+function Get-ProfileCliHelp {
     Write-Host ""
     Write-Host "  profile <command>" -ForegroundColor Cyan
     Write-Host ""
@@ -63,7 +63,7 @@ function _profile-help {
     Write-Host ""
 }
 
-function _profile-reload {
+function Invoke-ProfileCliReload {
     param([switch]$Silent)
 
     if (-not $Silent) {
@@ -91,7 +91,7 @@ function _profile-reload {
     }
 }
 
-function _profile-script-help {
+function Get-ProfileCliScriptHelp {
     Write-Host ""
     Write-Host "  profile script <subcommand>" -ForegroundColor Cyan
     Write-Host ""
@@ -105,8 +105,8 @@ function _profile-script-help {
     Write-Host ""
 }
 
-function _profile-script-list {
-    $paths = @(_profile-config-get-paths)
+function Get-ProfileCliScriptList {
+    $paths = @(Get-ProfileCliConfigScriptPathList)
     Write-Host ""
     if ($paths.Count -eq 0) {
         Write-Host "  No script paths configured." -ForegroundColor DarkGray
@@ -126,7 +126,7 @@ function _profile-script-list {
     Write-Host ""
 }
 
-function _profile-script-add {
+function Add-ProfileCliScriptPath {
     param([string]$Path)
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
@@ -135,7 +135,7 @@ function _profile-script-add {
     }
 
     $Path = $Path.Trim()
-    $paths = @(_profile-config-get-paths)
+    $paths = @(Get-ProfileCliConfigScriptPathList)
 
     if ($paths -contains $Path) {
         Write-Host "  Already configured: $Path" -ForegroundColor Yellow
@@ -147,14 +147,15 @@ function _profile-script-add {
         Write-Host "            (added anyway - path may be created later)" -ForegroundColor DarkGray
     }
 
-    _profile-config-save-paths (@($paths) + $Path)
+    Set-ProfileCliConfigScriptPathList (@($paths) + $Path)
     Write-Host "  Added: $Path" -ForegroundColor Green
     Write-Host "  Run " -NoNewline
     Write-Host "profile reload" -NoNewline -ForegroundColor Yellow
     Write-Host " to apply."
 }
 
-function _profile-script-remove {
+function Remove-ProfileCliScriptPath {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param([string]$IndexStr)
 
     if ([string]::IsNullOrWhiteSpace($IndexStr)) {
@@ -165,7 +166,7 @@ function _profile-script-remove {
         return
     }
 
-    $paths = @(_profile-config-get-paths)
+    $paths = @(Get-ProfileCliConfigScriptPathList)
 
     if ($paths.Count -eq 0) {
         Write-Host "  No paths configured." -ForegroundColor DarkGray
@@ -180,7 +181,8 @@ function _profile-script-remove {
 
     $removed   = $paths[$idx]
     $newPaths  = @(for ($i = 0; $i -lt $paths.Count; $i++) { if ($i -ne $idx) { $paths[$i] } })
-    _profile-config-save-paths $newPaths
+    if (-not $PSCmdlet.ShouldProcess($removed, "Remove configured script path")) { return }
+    Set-ProfileCliConfigScriptPathList $newPaths
     Write-Host "  Removed: $removed" -ForegroundColor Green
     Write-Host "  Run " -NoNewline
     Write-Host "profile reload" -NoNewline -ForegroundColor Yellow
@@ -191,7 +193,7 @@ function _profile-script-remove {
 # Internal config helpers
 # ---------------------------------------------------------------------------
 
-function _profile-config-get-paths {
+function Get-ProfileCliConfigScriptPathList {
     $configPath = Join-Path $env:LOCALAPPDATA "PSProfile\config.json"
     if (-not (Test-Path $configPath)) { return @() }
     try {
@@ -199,18 +201,21 @@ function _profile-config-get-paths {
         if (Get-Member -InputObject $cfg -Name 'ScriptPaths' -MemberType NoteProperty) {
             return @(@($cfg.ScriptPaths) | Where-Object { $_ })
         }
-    } catch {}
+    } catch { Write-Verbose "Could not read config: $_" }
     return @()
 }
 
-function _profile-config-save-paths {
+function Set-ProfileCliConfigScriptPathList {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param([string[]]$Paths)
 
     $configPath = Join-Path $env:LOCALAPPDATA "PSProfile\config.json"
 
+    if (-not $PSCmdlet.ShouldProcess($configPath, "Save script path configuration")) { return }
+
     $cfg = [PSCustomObject]@{ ScriptPaths = @() }
     if (Test-Path $configPath) {
-        try { $cfg = Get-Content $configPath -Raw | ConvertFrom-Json } catch {}
+        try { $cfg = Get-Content $configPath -Raw | ConvertFrom-Json } catch { Write-Verbose "Could not read config: $_" }
     }
 
     if (Get-Member -InputObject $cfg -Name 'ScriptPaths' -MemberType NoteProperty) {
