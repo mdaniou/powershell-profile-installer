@@ -780,6 +780,9 @@ function helper {
     Write-Host "  POWERSHELL" -ForegroundColor Magenta
     Write-Host "  fn" -ForegroundColor Yellow -NoNewline; Write-Host "                    View function source: fn FUNCTION-NAME"
     Write-Host "  helper" -ForegroundColor Yellow -NoNewline; Write-Host "                Display this command reference"
+    Write-Host "  rn" -ForegroundColor Yellow -NoNewline; Write-Host "                    Rename terminal: rn [NAME] (auto: branch or folder)"
+    Write-Host "  cpl" -ForegroundColor Yellow -NoNewline; Write-Host "                   Run copilot CLI (auto-renames terminal)"
+    Write-Host "  cw" -ForegroundColor Yellow -NoNewline; Write-Host "                    Run copilot in worktree: cw BRANCH"
     Write-Host "  profile" -ForegroundColor Yellow -NoNewline; Write-Host "               Show profile CLI help"
     Write-Host "  profile reload" -ForegroundColor Yellow -NoNewline; Write-Host "        Reload the profile"
     Write-Host "  profile reload -Silent" -ForegroundColor Yellow -NoNewline; Write-Host " Reload without output"
@@ -795,6 +798,75 @@ function helper {
     Write-Host ""
 }
 
+# Helper: detect the current Git branch (returns $null if not in a repo or git unavailable)
+function Get-CurrentBranch {
+    try {
+        $branch = git branch --show-current 2>$null
+        if ($LASTEXITCODE -eq 0 -and $branch) {
+            return $branch.Trim()
+        }
+    } catch {
+        # Git not installed or not accessible — silently return nothing
+    }
+    return $null
+}
+
+# Set the terminal window title to a given name, or auto-resolve from branch/folder
+function Set-TerminalName {
+    param(
+        [Parameter(Position = 0)]
+        [string]$Name
+    )
+
+    if (-not $Name) {
+        # Try Git branch first, fall back to current folder name
+        $Name = Get-CurrentBranch
+        if (-not $Name) {
+            $Name = Split-Path -Leaf (Get-Location)
+        }
+    }
+
+    $host.ui.RawUI.WindowTitle = $Name
+}
+Set-Alias -Name rn     -Value Set-TerminalName
+Set-Alias -Name rename -Value Set-TerminalName
+
+# Wrapper for the copilot CLI — renames terminal before executing
+function cpl {
+    # Resolve a descriptive name (branch or folder)
+    $resolvedName = Get-CurrentBranch
+    if (-not $resolvedName) {
+        $resolvedName = Split-Path -Leaf (Get-Location)
+    }
+
+    # Set terminal title with [cpl] prefix for visibility
+    Set-TerminalName "[cpl] $resolvedName"
+
+    # Execute copilot with all original arguments preserved
+    & copilot @args
+}
+
+# Wrapper for copilot worktree — renames terminal and runs copilot --worktree
+function cw {
+    param(
+        [Parameter(Position = 0)]
+        [string]$Branch
+    )
+
+    if (-not $Branch) {
+        Write-Host "Usage: cw <branch-name>" -ForegroundColor Yellow
+        Write-Host "  Runs: copilot --worktree <branch>" -ForegroundColor DarkGray
+        return
+    }
+
+    # Set terminal title with [cw] prefix for visibility
+    Set-TerminalName "[cw] $Branch"
+
+    # Execute copilot with --worktree flag, passing any extra arguments
+    $remaining = $args
+    & copilot --worktree $Branch @remaining
+}
+
 # Load the profile CLI (profile reload, profile script add/list/remove)
 $_cliScript = Join-Path $env:LOCALAPPDATA "PSProfile\profile-cli.ps1"
 if (Test-Path $_cliScript) {
@@ -804,7 +876,7 @@ if (Test-Path $_cliScript) {
 }
 Remove-Variable _cliScript
 
-Write-Host "      [OK] PowerShell utilities: fn, helper, profile" -ForegroundColor DarkGray
+Write-Host "      [OK] PowerShell utilities: fn, helper, profile, rn, cpl, cw" -ForegroundColor DarkGray
 
 
 # ============================================================================

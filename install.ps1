@@ -60,7 +60,7 @@ function Get-DocumentsPath {
 }
 
 # Get Documents configuration
-$docsConfig = Get-DocumentsPaths
+$docsConfig = Get-DocumentsPath
 $DocumentsPath = $docsConfig.Primary
 
 # Master profile location (avoid Documents entirely for master copy)
