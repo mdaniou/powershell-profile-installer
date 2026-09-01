@@ -137,6 +137,25 @@ Set-RepoFolder "C:\your\path"
 - `gss` - Stash with message
 - `gsl` - List stashes
 
+### Terraform Shortcuts
+- `t` - Alias for terraform
+- `ti` - terraform init
+- `tp` - terraform plan (defaults to `-out=tfplan`)
+- `ta` - terraform apply (uses `tfplan` if present)
+- `tv` - terraform validate
+- `tfmt` - terraform fmt -recursive
+- `to` - terraform output
+- `ts` - terraform state list
+- `tw` - terraform workspace list
+
+### Azure CLI Shortcuts
+- `azl` - az login
+- `azs` - az account set (bare: list subscriptions)
+- `azacct` - az account show
+- `azg` - az group list
+- `azvm` - az vm list
+- `azaks` - az aks list
+
 ### Network Utilities
 - `inet` - List local IP addresses
 - `myip` - Get public IP (copies to clipboard)

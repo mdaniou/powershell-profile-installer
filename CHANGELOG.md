@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Terraform shortcuts: `t`, `ti`, `tp`, `ta`, `tv`, `tfmt`, `to`, `ts`, `tw`
+- Azure CLI shortcuts: `azl`, `azs`, `azacct`, `azg`, `azvm`, `azaks`
+
 ## [0.6.0] - 2026-05-12
 
 ### Changed
