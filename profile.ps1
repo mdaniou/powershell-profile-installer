@@ -236,7 +236,7 @@ Set-Alias g git
 git config --global alias.lg "log --graph --decorate --date=relative --format=format:'%C(yellow)%h%Creset %C(cyan)%d%Creset %s %C(green)%cr%Creset by %C(bold blue)%an%Creset'" 2>$null
 
 # Git commit shortcuts
-function _Get-GitCommitMessage {
+function Get-GitCommitMessageTemplate {
     $branch    = git rev-parse --abbrev-ref HEAD 2>$null
     $porcelain = git status --porcelain
     $added     = ($porcelain | Where-Object { $_ -match '^\?\?|^A' }).Count
@@ -246,23 +246,23 @@ function _Get-GitCommitMessage {
 }
 function gcm {
     param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
-    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    if (-not $Message) { $Message = Get-GitCommitMessageTemplate }
     git commit -m $Message @ExtraArgs
 }
 function gcam {
     param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
-    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    if (-not $Message) { $Message = Get-GitCommitMessageTemplate }
     git commit -a -m $Message @ExtraArgs
 }
 function gcad {
     param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
-    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    if (-not $Message) { $Message = Get-GitCommitMessageTemplate }
     git commit -a --amend -m $Message @ExtraArgs
 }
 function glg { git lg $args }
 function gs {
-    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
-    if ($Args) { git status @Args } else { git status -s -b }
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { git status @PassthroughArgs } else { git status -s -b }
 }
 
 # Git grep with enhanced formatting and color
@@ -306,9 +306,9 @@ Set-Alias gitgrep gg
 
 # List branches sorted by last commit date
 function gb {
-    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
-    if ($Args) {
-        git branch @Args
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) {
+        git branch @PassthroughArgs
     } else {
         git branch --sort=-committerdate --format="%(color:yellow)%(refname:short)%(color:reset)  %(color:green)%(committerdate:relative)%(color:reset)  %(subject)"
     }
@@ -327,9 +327,11 @@ function gclean {
         [Alias('r')][switch]$Remote
     )
 
-    function _gclean-delete {
+    function Remove-GCleanBranch {
+        [CmdletBinding(SupportsShouldProcess = $true)]
         param([string]$Branch, [string]$Type)
         if ($Type -eq 'L') {
+            if (-not $PSCmdlet.ShouldProcess($Branch, "Delete local branch")) { return }
             git branch -d $Branch 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 Write-Host ("  Deleted local:  {0}" -f $Branch) -ForegroundColor Green
@@ -338,6 +340,7 @@ function gclean {
             }
         } else {
             $remoteName = $Branch -replace '^origin/', ''
+            if (-not $PSCmdlet.ShouldProcess($Branch, "Delete remote branch")) { return }
             git push origin --delete $remoteName 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 Write-Host ("  Deleted remote: {0}" -f $Branch) -ForegroundColor Green
@@ -347,7 +350,7 @@ function gclean {
         }
     }
 
-    function _gclean-get-local {
+    function Get-GCleanLocalMergedBranch {
         param([string]$Base)
         git branch --merged $Base 2>$null |
             Where-Object { $_ -notmatch 'main|master|\*' } |
@@ -356,7 +359,7 @@ function gclean {
             ForEach-Object { [PSCustomObject]@{ Name = $_; Type = 'L' } }
     }
 
-    function _gclean-get-remote {
+    function Get-GCleanRemoteMergedBranch {
         param([string]$Base)
         git branch -r --merged $Base 2>$null |
             Where-Object { $_ -notmatch 'main|master|\*|HEAD' } |
@@ -380,9 +383,9 @@ function gclean {
 
     while ($true) {
         $candidates = @(switch ($mode) {
-            'l' { _gclean-get-local $defaultBranch }
-            'r' { _gclean-get-remote $remoteBase }
-            'b' { @(_gclean-get-local $defaultBranch) + @(_gclean-get-remote $remoteBase) }
+            'l' { Get-GCleanLocalMergedBranch $defaultBranch }
+            'r' { Get-GCleanRemoteMergedBranch $remoteBase }
+            'b' { @(Get-GCleanLocalMergedBranch $defaultBranch) + @(Get-GCleanRemoteMergedBranch $remoteBase) }
         })
 
         if ($candidates.Count -eq 0) {
@@ -415,15 +418,15 @@ function gclean {
         if ($choice -eq 'q' -or $choice -eq '') {
             return
         } elseif ($choice -eq 'a') {
-            $candidates | ForEach-Object { _gclean-delete $_.Name $_.Type }
+            $candidates | ForEach-Object { Remove-GCleanBranch $_.Name $_.Type }
         } elseif ($choice -eq 'al' -and $mode -eq 'b') {
-            $candidates | Where-Object { $_.Type -eq 'L' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
+            $candidates | Where-Object { $_.Type -eq 'L' } | ForEach-Object { Remove-GCleanBranch $_.Name $_.Type }
         } elseif ($choice -eq 'ar' -and $mode -eq 'b') {
-            $candidates | Where-Object { $_.Type -eq 'R' } | ForEach-Object { _gclean-delete $_.Name $_.Type }
+            $candidates | Where-Object { $_.Type -eq 'R' } | ForEach-Object { Remove-GCleanBranch $_.Name $_.Type }
         } elseif ($choice -match '^\d+$') {
             $idx = [int]$choice - 1
             if ($idx -ge 0 -and $idx -lt $candidates.Count) {
-                _gclean-delete $candidates[$idx].Name $candidates[$idx].Type
+                Remove-GCleanBranch $candidates[$idx].Name $candidates[$idx].Type
             } else {
                 Write-Host "  Invalid number." -ForegroundColor DarkGray
             }
@@ -448,7 +451,7 @@ Remove-Item Alias:gp -Force -ErrorAction SilentlyContinue
 
 function gacp {
     param([string]$Message, [Parameter(ValueFromRemainingArguments)][string[]]$ExtraArgs)
-    if (-not $Message) { $Message = _Get-GitCommitMessage }
+    if (-not $Message) { $Message = Get-GitCommitMessageTemplate }
     git add .
     git commit -m $Message @ExtraArgs
     Get-ItemProperty
@@ -456,8 +459,8 @@ function gacp {
 
 # Git show changed files
 function gfiles {
-    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
-    if ($Args) { git diff --name-only @Args } else { git diff --name-only }
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { git diff --name-only @PassthroughArgs } else { git diff --name-only }
 }
 
 # Git stash with message
@@ -468,8 +471,8 @@ function gss {
 
 # List git stashes
 function gsl {
-    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
-    if ($Args) { git stash list @Args } else { git stash list }
+    param([Parameter(ValueFromRemainingArguments)][string[]]$PassthroughArgs)
+    if ($PassthroughArgs) { git stash list @PassthroughArgs } else { git stash list }
 }
 
 # Create a new worktree and branch from within current git directory.
