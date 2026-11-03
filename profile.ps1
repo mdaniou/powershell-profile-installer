@@ -1088,11 +1088,17 @@ foreach ($defaultLoc in $defaultLocations) {
 
 # Only change to C:\repo if we're in a default location
 if ($isDefaultLocation) {
-    if (Test-Path "C:\repo") {
+
+    $OneDrivePath = Join-Path -Path $env:OneDrive -ChildPath repo
+
+    if (Test-Path $OneDrivePath) {
+        Set-Location $OneDrivePath
+        Write-Host "      [OK] Changed to $OneDrivePath" -ForegroundColor DarkGray
+    } elseif (Test-Path "C:\repo") {
         Set-Location C:\repo
         Write-Host "      [OK] Changed to C:\repo" -ForegroundColor DarkGray
     } else {
-        Write-Host "      ! C:\repo not found, staying in default location" -ForegroundColor Yellow
+        Write-Host "      ! Not $OneDrivePath or C:\repo have been found, staying in default location" -ForegroundColor Yellow
     }
 } else {
     # User opened PowerShell in a specific directory - respect their choice
