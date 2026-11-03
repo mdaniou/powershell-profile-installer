@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Terraform shortcuts: `t`, `ti`, `tp`, `ta`, `tv`, `tfmt`, `to`, `ts`, `tw`
 - Azure CLI shortcuts: `azl`, `azs`, `azacct`, `azg`, `azvm`, `azaks`
+- Claude Code shortcuts: `c` (plan mode), `cc` (continue), `cr` (resume), `cw` (worktree), `cq` (quote-free one-shot query)
+
+### Removed
+- Copilot CLI shortcuts `cpl` and `cw` (`cw` now runs `claude --worktree`)
+
 
 ## [0.6.0] - 2026-05-12
 

@@ -156,6 +156,13 @@ Set-RepoFolder "C:\your\path"
 - `azvm` - az vm list
 - `azaks` - az aks list
 
+### Claude Code Shortcuts
+- `c` - claude in plan mode (`--permission-mode plan`)
+- `cc` - claude -c (continue last session)
+- `cr` - claude -r (resume a session)
+- `cw` - claude --worktree [name]
+- `cq` - one-shot query without quotes: `cq how to run a py script?`
+
 ### Network Utilities
 - `inet` - List local IP addresses
 - `myip` - Get public IP (copies to clipboard)

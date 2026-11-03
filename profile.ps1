@@ -20,7 +20,7 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # ============================================================================
 # PROMPT CUSTOMIZATION
 # ============================================================================
-Write-Host "[1/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[1/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring custom prompt..." -ForegroundColor Green
 
 function Get-GitStatus {
@@ -136,7 +136,7 @@ Write-Host "      [OK] Custom prompt configured" -ForegroundColor DarkGray
 # ============================================================================
 # NAVIGATION SHORTCUTS
 # ============================================================================
-Write-Host "[2/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[2/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up navigation shortcuts..." -ForegroundColor Green
 
 function .. { Set-Location .. }
@@ -149,7 +149,7 @@ Write-Host "      [OK] Navigation shortcuts: .. ... ...." -ForegroundColor DarkG
 # ============================================================================
 # FILE OPERATIONS
 # ============================================================================
-Write-Host "[3/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[3/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring file operations..." -ForegroundColor Green
 
 # Create new file (Unix-style touch command)
@@ -226,7 +226,7 @@ Write-Host "      [OK] File operations: touch, grep, ff, fif, dsize, big, mkcd, 
 # ============================================================================
 # GIT CONFIGURATION
 # ============================================================================
-Write-Host "[4/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[4/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up Git aliases and functions..." -ForegroundColor Green
 
 # Git alias
@@ -630,7 +630,7 @@ Write-Host "      [OK] Git: g, gs, gcm, gcam, gcad, glg, gb, gg, gundo, gclean, 
 # ============================================================================
 # TERRAFORM
 # ============================================================================
-Write-Host "[5/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[5/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up Terraform shortcuts..." -ForegroundColor Green
 
 $script:hasTerraform = [bool](Get-Command terraform -ErrorAction SilentlyContinue)
@@ -688,7 +688,7 @@ if ($script:hasTerraform) {
 # ============================================================================
 # AZURE CLI
 # ============================================================================
-Write-Host "[6/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[6/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting up Azure CLI shortcuts..." -ForegroundColor Green
 
 $script:hasAzCli = [bool](Get-Command az -ErrorAction SilentlyContinue)
@@ -730,9 +730,73 @@ if ($script:hasAzCli) {
 
 
 # ============================================================================
+# CLAUDE CODE
+# ============================================================================
+Write-Host "[7/12] " -ForegroundColor DarkGray -NoNewline
+Write-Host "Setting up Claude Code shortcuts..." -ForegroundColor Green
+
+$script:hasClaude = [bool](Get-Command claude -ErrorAction SilentlyContinue)
+
+# Resolve a terminal title: "[tag] branch-or-folder"
+function Get-ClaudeTitle {
+    param([string]$Tag)
+    $name = Get-CurrentBranch
+    if (-not $name) { $name = Split-Path -Leaf (Get-Location) }
+    "[$Tag] $name"
+}
+
+# c: claude in plan mode
+function c {
+    Set-TerminalName (Get-ClaudeTitle 'c')
+    & claude --permission-mode plan @args
+}
+
+# cc: continue the most recent session
+function cc {
+    Set-TerminalName (Get-ClaudeTitle 'cc')
+    & claude -c @args
+}
+
+# cr: resume a session (picker, or cr <id>)
+function cr {
+    Set-TerminalName (Get-ClaudeTitle 'cr')
+    & claude -r @args
+}
+
+# cw: claude in a new worktree (name optional)
+function cw {
+    param(
+        [Parameter(Position = 0)]
+        [string]$Name
+    )
+    $title = if ($Name) { "[cw] $Name" } else { Get-ClaudeTitle 'cw' }
+    Set-TerminalName $title
+    $remaining = $args
+    if ($Name) { & claude --worktree $Name @remaining } else { & claude --worktree @remaining }
+}
+
+# cq: one-shot headless query, no quotes needed: cq how to run a py script?
+# (no param() block so words starting with '-' stay part of the prompt)
+function cq {
+    if (-not $args) {
+        Write-Host "Usage: cq <question words...>" -ForegroundColor Yellow
+        Write-Host "  Runs: claude -p `"<question>`"" -ForegroundColor DarkGray
+        return
+    }
+    & claude -p ($args -join ' ')
+}
+
+if ($script:hasClaude) {
+    Write-Host "      [OK] Claude Code: c, cc, cr, cw, cq" -ForegroundColor DarkGray
+} else {
+    Write-Host "      [OK] Claude Code: c, cc, cr, cw, cq (claude not found on PATH)" -ForegroundColor DarkGray
+}
+
+
+# ============================================================================
 # NETWORK UTILITIES
 # ============================================================================
-Write-Host "[7/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[8/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading network utilities..." -ForegroundColor Green
 
 # List all local IP addresses
@@ -774,7 +838,7 @@ Write-Host "      [OK] Network: inet, ports, myip, nsl" -ForegroundColor DarkGra
 # ============================================================================
 # SYSTEM INFORMATION
 # ============================================================================
-Write-Host "[8/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[9/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading system information utilities..." -ForegroundColor Green
 
 # System resource usage
@@ -812,7 +876,7 @@ Write-Host "      [OK] System info: sysinfo, apps, uptime" -ForegroundColor Dark
 # ============================================================================
 # POWERSHELL UTILITIES
 # ============================================================================
-Write-Host "[9/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[10/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Configuring PowerShell utilities..." -ForegroundColor Green
 
 # View function source code quickly
@@ -890,6 +954,14 @@ function helper {
     Write-Host "  azaks" -ForegroundColor Yellow -NoNewline; Write-Host "       az aks list"
     Write-Host ""
 
+    Write-Host "  CLAUDE CODE" -ForegroundColor Magenta
+    Write-Host "  c" -ForegroundColor Yellow -NoNewline; Write-Host "           claude in plan mode: c ARGS"
+    Write-Host "  cc" -ForegroundColor Yellow -NoNewline; Write-Host "          claude -c (continue last session)"
+    Write-Host "  cr" -ForegroundColor Yellow -NoNewline; Write-Host "          claude -r (resume): cr [ID]"
+    Write-Host "  cw" -ForegroundColor Yellow -NoNewline; Write-Host "          claude --worktree: cw [NAME]"
+    Write-Host "  cq" -ForegroundColor Yellow -NoNewline; Write-Host "          one-shot query, no quotes: cq how do I ...?"
+    Write-Host ""
+
     Write-Host "  NETWORK" -ForegroundColor Magenta
     Write-Host "  inet" -ForegroundColor Yellow -NoNewline; Write-Host "        List all local IP addresses"
     Write-Host "  myip" -ForegroundColor Yellow -NoNewline; Write-Host "        Get public IP (copied to clipboard)"
@@ -907,8 +979,6 @@ function helper {
     Write-Host "  fn" -ForegroundColor Yellow -NoNewline; Write-Host "                    View function source: fn FUNCTION-NAME"
     Write-Host "  helper" -ForegroundColor Yellow -NoNewline; Write-Host "                Display this command reference"
     Write-Host "  rn" -ForegroundColor Yellow -NoNewline; Write-Host "                    Rename terminal: rn [NAME] (auto: branch or folder)"
-    Write-Host "  cpl" -ForegroundColor Yellow -NoNewline; Write-Host "                   Run copilot CLI (auto-renames terminal)"
-    Write-Host "  cw" -ForegroundColor Yellow -NoNewline; Write-Host "                    Run copilot in worktree: cw BRANCH"
     Write-Host "  profile" -ForegroundColor Yellow -NoNewline; Write-Host "               Show profile CLI help"
     Write-Host "  profile reload" -ForegroundColor Yellow -NoNewline; Write-Host "        Reload the profile"
     Write-Host "  profile reload -Silent" -ForegroundColor Yellow -NoNewline; Write-Host " Reload without output"
@@ -957,42 +1027,6 @@ function Set-TerminalName {
 Set-Alias -Name rn     -Value Set-TerminalName
 Set-Alias -Name rename -Value Set-TerminalName
 
-# Wrapper for the copilot CLI — renames terminal before executing
-function cpl {
-    # Resolve a descriptive name (branch or folder)
-    $resolvedName = Get-CurrentBranch
-    if (-not $resolvedName) {
-        $resolvedName = Split-Path -Leaf (Get-Location)
-    }
-
-    # Set terminal title with [cpl] prefix for visibility
-    Set-TerminalName "[cpl] $resolvedName"
-
-    # Execute copilot with all original arguments preserved
-    & copilot @args
-}
-
-# Wrapper for copilot worktree — renames terminal and runs copilot --worktree
-function cw {
-    param(
-        [Parameter(Position = 0)]
-        [string]$Branch
-    )
-
-    if (-not $Branch) {
-        Write-Host "Usage: cw <branch-name>" -ForegroundColor Yellow
-        Write-Host "  Runs: copilot --worktree <branch>" -ForegroundColor DarkGray
-        return
-    }
-
-    # Set terminal title with [cw] prefix for visibility
-    Set-TerminalName "[cw] $Branch"
-
-    # Execute copilot with --worktree flag, passing any extra arguments
-    $remaining = $args
-    & copilot --worktree $Branch @remaining
-}
-
 # Load the profile CLI (profile reload, profile script add/list/remove)
 $_cliScript = Join-Path $env:LOCALAPPDATA "PSProfile\profile-cli.ps1"
 if (Test-Path $_cliScript) {
@@ -1002,13 +1036,13 @@ if (Test-Path $_cliScript) {
 }
 Remove-Variable _cliScript
 
-Write-Host "      [OK] PowerShell utilities: fn, helper, profile, rn, cpl, cw" -ForegroundColor DarkGray
+Write-Host "      [OK] PowerShell utilities: fn, helper, profile, rn" -ForegroundColor DarkGray
 
 
 # ============================================================================
 # AUTO-EXECUTE SCRIPTS
 # ============================================================================
-Write-Host "[10/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[11/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Loading auto-execute scripts..." -ForegroundColor Green
 
 $psConfigPath = Join-Path $env:LOCALAPPDATA "PSProfile\config.json"
@@ -1062,7 +1096,7 @@ if ($autoExecPaths.Count -eq 0) {
 # ============================================================================
 # STARTUP
 # ============================================================================
-Write-Host "[11/11] " -ForegroundColor DarkGray -NoNewline
+Write-Host "[12/12] " -ForegroundColor DarkGray -NoNewline
 Write-Host "Setting default location..." -ForegroundColor Green
 
 # Detect if we're in a "user-selected" directory
